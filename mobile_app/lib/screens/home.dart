@@ -49,8 +49,8 @@ class HomeScreen extends StatelessWidget {
           Text(
             'Discover amazing products and deals',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.white.withOpacity(0.9),
-            ),
+                  color: Colors.white.withOpacity(0.9),
+                ),
           ),
         ],
       ),
@@ -64,9 +64,9 @@ class HomeScreen extends StatelessWidget {
         Text(
           'Featured Products',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            color: Theme.of(context).colorScheme.primary,
-            fontWeight: FontWeight.bold,
-          ),
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.bold,
+              ),
         ),
         const SizedBox(height: AppConstants.defaultPadding),
         SizedBox(
@@ -131,9 +131,9 @@ class HomeScreen extends StatelessWidget {
                   Text(
                     '\$${productPrices[index]}',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   const SizedBox(height: AppConstants.defaultPadding),
                   CustomButton(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'home.dart';
 import 'profile.dart';
+import 'services.dart';
 
 class NavigationScreen extends StatefulWidget {
   const NavigationScreen({super.key});
@@ -14,7 +15,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
 
   static const List<Widget> _screens = [
     HomeScreen(),
-    ProfileScreen(),
+    ServicesPage(),
     ProfileScreen(),
   ];
 
