@@ -4,16 +4,35 @@ class AppTheme {
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: Colors.blue,
-        brightness: Brightness.light,
+      colorScheme: ColorScheme.light(
+        primary: Colors.purple,
+        secondary: Colors.purple.shade300,
+        surface: const Color(0xFFF8F8F8), // Off-white background
+        background: const Color(0xFFF8F8F8), // Off-white background
+        onPrimary: Colors.white,
+        onSecondary: Colors.white,
+        onSurface: Colors.black87,
+        onBackground: Colors.black87,
       ),
-      appBarTheme: const AppBarTheme(centerTitle: true, elevation: 0),
+      scaffoldBackgroundColor: const Color(0xFFF8F8F8), // Off-white background
+      appBarTheme: AppBarTheme(
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: Colors.purple,
+        foregroundColor: Colors.white,
+      ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.purple,
+          foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
+      ),
+      cardTheme: CardTheme(
+        color: Colors.white,
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
@@ -21,16 +40,35 @@ class AppTheme {
   static ThemeData get darkTheme {
     return ThemeData(
       useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: Colors.blue,
-        brightness: Brightness.dark,
+      colorScheme: ColorScheme.dark(
+        primary: Colors.purple,
+        secondary: Colors.purple.shade300,
+        surface: const Color(0xFF1E1E1E),
+        background: const Color(0xFF1E1E1E),
+        onPrimary: Colors.white,
+        onSecondary: Colors.white,
+        onSurface: Colors.white,
+        onBackground: Colors.white,
       ),
-      appBarTheme: const AppBarTheme(centerTitle: true, elevation: 0),
+      scaffoldBackgroundColor: const Color(0xFF1E1E1E),
+      appBarTheme: AppBarTheme(
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: Colors.purple,
+        foregroundColor: Colors.white,
+      ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.purple,
+          foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
+      ),
+      cardTheme: CardTheme(
+        color: const Color(0xFF2D2D2D),
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
