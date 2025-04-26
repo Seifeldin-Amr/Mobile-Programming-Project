@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/app_constants.dart';
 import '../widgets/custom_button.dart';
+import '../widgets/custom_app_bar.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -8,7 +9,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Home'), centerTitle: true),
+      appBar: const CustomAppBar(),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(AppConstants.defaultPadding),
@@ -41,13 +42,14 @@ class HomeScreen extends StatelessWidget {
         children: [
           Text(
             'Welcome Back!',
-            style: Theme.of(
-              context,
-            ).textTheme.headlineMedium?.copyWith(color: Colors.white),
+            style: Theme.of(context)
+                .textTheme
+                .headlineMedium
+                ?.copyWith(color: Colors.white),
           ),
           const SizedBox(height: AppConstants.smallPadding),
           Text(
-            'Discover amazing products and deals',
+            'Discover amazing interior design ideas',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: Colors.white.withOpacity(0.9),
                 ),
@@ -62,7 +64,7 @@ class HomeScreen extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Featured Products',
+          'Featured Designs',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 color: Theme.of(context).colorScheme.primary,
                 fontWeight: FontWeight.bold,
@@ -84,14 +86,14 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildProductCard(BuildContext context, int index) {
-    final productNames = [
-      'Smart Watch',
-      'Wireless Earbuds',
-      'Laptop Pro',
-      'Smartphone X',
-      'Tablet Plus',
+    final designNames = [
+      'Modern Kitchen',
+      'Luxury Bathroom',
+      'Cozy Living Room',
+      'Elegant Bedroom',
+      'Stylish Home Office',
     ];
-    final productPrices = [199.99, 129.99, 1299.99, 899.99, 499.99];
+    final designPrices = [2500.00, 1800.00, 3200.00, 2100.00, 1900.00];
 
     return Card(
       margin: const EdgeInsets.only(right: AppConstants.defaultPadding),
@@ -111,7 +113,7 @@ class HomeScreen extends StatelessWidget {
                 ),
                 child: Center(
                   child: Icon(
-                    Icons.shopping_bag,
+                    Icons.home,
                     size: AppConstants.largeIconSize,
                     color: Theme.of(context).colorScheme.primary,
                   ),
@@ -124,12 +126,12 @@ class HomeScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    productNames[index],
+                    designNames[index],
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: AppConstants.smallPadding),
                   Text(
-                    '\$${productPrices[index]}',
+                    '\$${designPrices[index]}',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           color: Theme.of(context).colorScheme.primary,
                           fontWeight: FontWeight.bold,
@@ -137,7 +139,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: AppConstants.defaultPadding),
                   CustomButton(
-                    text: 'Add to Cart',
+                    text: 'View Design',
                     onPressed: () {},
                     width: double.infinity,
                   ),
