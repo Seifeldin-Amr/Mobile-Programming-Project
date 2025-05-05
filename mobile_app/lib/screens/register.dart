@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../widgets/custom_app_bar.dart';
+import '../services/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -29,11 +32,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Register'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
-      ),
+      appBar: const CustomAppBar(),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -139,12 +138,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
                   if (_formKey.currentState!.validate()) {
-                    // TODO: Implement registration logic
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Registration successful!')),
-                    );
+                    try {
+                      Map<String, dynamic> additionalData = {
+                        'firstName': _firstNameController.text.trim(),
+                        'lastName': _lastNameController.text.trim(),
+                        'address': _addressController.text.trim(),
+                      };
+
+                      User? user = await AuthService().register(
+                        _emailController.text,
+                        _passwordController.text,
+                        additionalData,
+                      );
+
+                      if (user != null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text('Registration successful!')),
+                        );
+
+                        Navigator.pushReplacementNamed(context, '');
+                      }
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Error: ${e.toString()}')),
+                      );
+                    }
                   }
                 },
                 style: ElevatedButton.styleFrom(

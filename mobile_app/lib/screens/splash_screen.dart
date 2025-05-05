@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'navigation.dart';
+import 'login.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -26,12 +28,18 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
-    // Navigate to main screen after 3 seconds
+    // Navigate to login or main screen after 3 seconds
     Timer(const Duration(seconds: 3), () {
       if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const NavigationScreen()),
-        );
+        if (FirebaseAuth.instance.currentUser == null) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const LoginScreen()),
+          );
+        } else {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const NavigationScreen()),
+          );
+        }
       }
     });
   }

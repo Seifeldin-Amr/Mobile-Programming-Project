@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'register.dart';
+import '../widgets/custom_app_bar.dart';
+import '../services/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'navigation.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -25,11 +29,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Login'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
-      ),
+      appBar: const CustomAppBar(),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -120,12 +120,30 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
                   if (_formKey.currentState!.validate()) {
-                    // TODO: Implement login logic
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Login successful!')),
-                    );
+                    try {
+                      User? user = await AuthService().login(
+                        _emailController.text,
+                        _passwordController.text,
+                      );
+
+                      if (user != null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Login successful!')),
+                        );
+
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const NavigationScreen()),
+                        );
+                      }
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Error: ${e.toString()}')),
+                      );
+                    }
                   }
                 },
                 style: ElevatedButton.styleFrom(
