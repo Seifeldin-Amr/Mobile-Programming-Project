@@ -47,8 +47,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
- 
-
   @override
   Widget build(BuildContext context) {
     final User? user = FirebaseAuth.instance.currentUser;
@@ -95,14 +93,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   email,
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
-                const SizedBox(height: AppConstants.smallPadding),
-                Text(
-                  'Admin Status: ${_isAdmin ? 'Yes' : 'No'}',
-                  style: TextStyle(
-                    color: _isAdmin ? Colors.green : Colors.red,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                _isAdmin
+                    ? Container(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const SizedBox(height: AppConstants.smallPadding),
+                            Text(
+                              'Admin',
+                              style: TextStyle(
+                                color: Colors.green,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : const SizedBox.shrink(),
                 const SizedBox(height: AppConstants.largePadding),
                 Expanded(
                   child: Column(
