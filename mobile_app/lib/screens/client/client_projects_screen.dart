@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mobile_app/constants/app_constants.dart';
+import 'package:mobile_app/screens/client/client_stages.dart';
 import '../client/client_documents_screen.dart';
 
 class ClientProjectsScreen extends StatefulWidget {
@@ -182,7 +183,7 @@ class _ClientProjectsScreenState extends State<ClientProjectsScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => ClientDocumentsScreen(
+                  builder: (context) => ClientStagesScreen(
                     projectId: project['id'],
                     projectName: projectName,
                   ),
