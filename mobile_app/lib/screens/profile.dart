@@ -4,10 +4,50 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../constants/app_constants.dart';
 import '../widgets/custom_app_bar.dart';
 import '../services/auth_service.dart';
-import 'login.dart';
+import '../services/admin_service.dart';
+import 'auth/login.dart';
+import 'admin/admin_dashboard.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  final _adminService = AdminService();
+  bool _isAdmin = false;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAdminStatus();
+  }
+
+  Future<void> _checkAdminStatus() async {
+    try {
+      final isAdmin = await _adminService.isCurrentUserAdmin();
+      print('Admin status check in Profile Screen: $isAdmin'); // Debug print
+      if (mounted) {
+        setState(() {
+          _isAdmin = isAdmin;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error checking admin status: $e'); // Debug print
+      if (mounted) {
+        setState(() {
+          _isAdmin = false;
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+ 
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +69,15 @@ class ProfileScreen extends StatelessWidget {
         final String firstName = userData['firstName'] ?? 'First Name';
         final String lastName = userData['lastName'] ?? 'Last Name';
         final String email = userData['email'] ?? 'Email';
+        final bool isAdminInFirestore = userData['isAdmin'] == true;
+
+        if (isAdminInFirestore != _isAdmin) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            setState(() {
+              _isAdmin = isAdminInFirestore;
+            });
+          });
+        }
 
         return Scaffold(
           appBar: const CustomAppBar(),
@@ -46,13 +95,18 @@ class ProfileScreen extends StatelessWidget {
                   email,
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
+                const SizedBox(height: AppConstants.smallPadding),
+                Text(
+                  'Admin Status: ${_isAdmin ? 'Yes' : 'No'}',
+                  style: TextStyle(
+                    color: _isAdmin ? Colors.green : Colors.red,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: AppConstants.largePadding),
-
-                // Main Options
                 Expanded(
                   child: Column(
                     children: [
-                      // Personal Details
                       _buildOptionCard(
                         context,
                         Icons.person_outline,
@@ -60,8 +114,6 @@ class ProfileScreen extends StatelessWidget {
                         () {},
                       ),
                       const SizedBox(height: AppConstants.defaultPadding),
-
-                      // Past Orders
                       _buildOptionCard(
                         context,
                         Icons.shopping_bag_outlined,
@@ -69,8 +121,6 @@ class ProfileScreen extends StatelessWidget {
                         () {},
                       ),
                       const SizedBox(height: AppConstants.defaultPadding),
-
-                      // Settings
                       _buildOptionCard(
                         context,
                         Icons.settings_outlined,
@@ -78,8 +128,22 @@ class ProfileScreen extends StatelessWidget {
                         () {},
                       ),
                       const SizedBox(height: AppConstants.defaultPadding),
-
-                      // Logout
+                      if (_isAdmin)
+                        _buildOptionCard(
+                          context,
+                          Icons.admin_panel_settings,
+                          'Admin Dashboard',
+                          () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const AdminDashboard(),
+                              ),
+                            );
+                          },
+                          color: Colors.purple.shade800,
+                        ),
+                      const SizedBox(height: AppConstants.defaultPadding),
                       _buildLogoutButton(context),
                     ],
                   ),
@@ -96,11 +160,13 @@ class ProfileScreen extends StatelessWidget {
     BuildContext context,
     IconData icon,
     String title,
-    VoidCallback onTap,
-  ) {
+    VoidCallback onTap, {
+    Color? color,
+  }) {
     return Card(
       child: ListTile(
-        leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
+        leading:
+            Icon(icon, color: color ?? Theme.of(context).colorScheme.primary),
         title: Text(title),
         trailing: const Icon(Icons.chevron_right),
         onTap: onTap,
@@ -119,7 +185,6 @@ class ProfileScreen extends StatelessWidget {
               const SnackBar(content: Text('Logged out successfully!')),
             );
 
-            // Navigate back to the login screen
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(builder: (context) => const LoginScreen()),
             );
