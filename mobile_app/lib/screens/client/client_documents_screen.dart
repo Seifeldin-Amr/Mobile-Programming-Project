@@ -353,8 +353,7 @@ class _ClientDocumentsScreenState extends State<ClientDocumentsScreen>
                         approvalStatus != ApprovalStatus.rejected)
                       ElevatedButton.icon(
                         onPressed: () => _showApprovalDialog(document),
-                        icon: const Icon(Icons.check_circle),
-                        label: const Text('Approve'),
+                        label: const Text('Respond'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor:
                               Theme.of(context).colorScheme.primary,
