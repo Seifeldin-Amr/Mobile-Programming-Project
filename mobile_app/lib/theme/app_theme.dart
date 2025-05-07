@@ -5,8 +5,8 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.light(
-        primary: Colors.purple,
-        secondary: Colors.purple.shade300,
+        primary: Colors.lightBlue,
+        secondary: Colors.lightBlue.shade300,
         surface: const Color(0xFFF8F8F8), // Off-white background
         background: const Color(0xFFF8F8F8), // Off-white background
         onPrimary: Colors.white,
@@ -18,12 +18,12 @@ class AppTheme {
       appBarTheme: AppBarTheme(
         centerTitle: true,
         elevation: 0,
-        backgroundColor: Colors.purple,
+        backgroundColor: Colors.lightBlue,
         foregroundColor: Colors.white,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.purple,
+          backgroundColor: Colors.lightBlue,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -41,8 +41,8 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.dark(
-        primary: Colors.purple,
-        secondary: Colors.purple.shade300,
+        primary: Colors.lightBlue,
+        secondary: Colors.lightBlue.shade300,
         surface: const Color(0xFF1E1E1E),
         background: const Color(0xFF1E1E1E),
         onPrimary: Colors.white,
@@ -54,12 +54,12 @@ class AppTheme {
       appBarTheme: AppBarTheme(
         centerTitle: true,
         elevation: 0,
-        backgroundColor: Colors.purple,
+        backgroundColor: Colors.lightBlue,
         foregroundColor: Colors.white,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.purple,
+          backgroundColor: Colors.lightBlue,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
