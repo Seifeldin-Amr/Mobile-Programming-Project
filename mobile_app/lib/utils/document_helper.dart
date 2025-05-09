@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import 'package:open_file_plus/open_file_plus.dart';
 import '../services/document_service.dart';
 
 class DocumentHelper {
@@ -67,6 +68,76 @@ class DocumentHelper {
     } catch (e) {
       print('❌ Error saving document to temp: $e');
       return null;
+    }
+  }
+
+  // Download and optionally open a document
+  static Future<Map<String, dynamic>> downloadDocument({
+    required String? documentId,
+    required String? base64Content,
+    required String fileName,
+    required BuildContext context,
+    bool openAfterDownload = true,
+  }) async {
+    try {
+      // If base64Content is not available, fetch it from Firestore
+      String? contentToUse = base64Content;
+      if (contentToUse == null || contentToUse.isEmpty) {
+        if (documentId == null) {
+          throw Exception('Document ID is missing');
+        }
+
+        // Fetch document with content from service
+        final fullDoc =
+            await _documentService.getDocumentWithContent(documentId);
+        if (fullDoc == null) {
+          throw Exception('Document not found');
+        }
+        contentToUse = fullDoc['fileContent'] as String?;
+
+        if (contentToUse == null || contentToUse.isEmpty) {
+          throw Exception('File content is missing or empty');
+        }
+      }
+
+      // Decode the base64 content
+      final Uint8List fileBytes = base64Decode(contentToUse);
+
+      // Save to temporary directory (works on all platforms without permissions)
+      final tempDir = await getTemporaryDirectory();
+      final file = File('${tempDir.path}/$fileName');
+      await file.writeAsBytes(fileBytes);
+
+      if (!await file.exists()) {
+        throw Exception('Failed to save document to storage');
+      }
+
+      print('File saved to: ${file.path}');
+
+      // Try to open the file if requested
+      OpenResult? openResult;
+      if (openAfterDownload) {
+        try {
+          openResult = await OpenFile.open(file.path);
+          print('OpenFile result: ${openResult.type} - ${openResult.message}');
+        } catch (e) {
+          print('Error opening file: $e');
+          // We'll still return success since the file was downloaded
+        }
+      }
+
+      return {
+        'success': true,
+        'filePath': file.path,
+        'openResult': openResult,
+        'message': 'File downloaded successfully'
+      };
+    } catch (e) {
+      print('Error in downloadDocument: $e');
+      return {
+        'success': false,
+        'message': 'Error: $e',
+      };
     }
   }
 

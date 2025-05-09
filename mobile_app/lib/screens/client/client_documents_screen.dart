@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
 import '../../models/project_document.dart';
-import '../../models/project.dart';
 import '../../models/document_approval.dart';
 import '../../services/approval_service.dart';
+import '../../services/document_service.dart';
 import '../../utils/document_helper.dart';
 import 'document_approval_dialog.dart';
 
@@ -28,6 +27,7 @@ class _ClientDocumentsScreenState extends State<ClientDocumentsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final _approvalService = ApprovalService();
+  final _documentService = DocumentService();
   bool _isLoading = true;
   List<Map<String, dynamic>> _documents = [];
   Map<String, ApprovalStatus?> _documentApprovalStatus = {};
@@ -51,41 +51,14 @@ class _ClientDocumentsScreenState extends State<ClientDocumentsScreen>
     });
 
     try {
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('project_documents')
-          .where('projectId', isEqualTo: widget.projectId)
-          .where('stage',
-              isEqualTo: ProjectStage.stage1Planning.toString().split('.').last)
-          .orderBy('uploadDate', descending: true)
-          .get();
-
-      List<Map<String, dynamic>> documents = [];
-      Map<String, ApprovalStatus?> approvalStatus = {};
-
-      for (var doc in querySnapshot.docs) {
-        var data = doc.data();
-        data['id'] = doc.id;
-
-        // Check approval status
-        ApprovalStatus? status =
-            await _approvalService.getDocumentApprovalStatus(doc.id);
-        approvalStatus[doc.id] = status;
-
-        // Group by document type
-        DocumentType type = DocumentType.values.firstWhere(
-          (e) => e.toString().split('.').last == data['type'],
-          orElse: () => DocumentType.meetingSummary,
-        );
-
-        documents.add({
-          ...data,
-          'documentType': type,
-        });
-      }
+      // Use the new service method to get documents with approval status
+      final result = await _documentService.getProjectDocumentsWithApproval(
+          widget.projectId, ProjectStage.stage1Planning);
 
       setState(() {
-        _documents = documents;
-        _documentApprovalStatus = approvalStatus;
+        _documents = result['documents'] as List<Map<String, dynamic>>;
+        _documentApprovalStatus =
+            result['approvalStatus'] as Map<String, ApprovalStatus?>;
         _isLoading = false;
       });
     } catch (e) {
@@ -102,52 +75,26 @@ class _ClientDocumentsScreenState extends State<ClientDocumentsScreen>
     return _documents.where((doc) => doc['documentType'] == type).toList();
   }
 
-  // Simplified document download and view function
+  // A simplified method that uses DocumentHelper utility
   Future<void> _downloadAndOpenDocument(Map<String, dynamic> document) async {
-    try {
-      final documentId = document['id'];
-      if (documentId == null) {
-        throw Exception('Document ID is missing');
-      }
+    // Show loading indicator
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Preparing document...')),
+    );
 
-      // Show loading indicator
+    final result = await DocumentHelper.downloadDocument(
+      documentId: document['id'] as String?,
+      base64Content: document['fileContent'] as String?,
+      fileName: (document['name'] as String?) ?? 'document.pdf',
+      context: context,
+      openAfterDownload: true,
+    );
+
+    // Handle the result
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Downloading document...')),
+        SnackBar(content: Text(result['message'])),
       );
-
-      // Construct the firestore URL format for DocumentHelper
-      final firestoreUrl = 'firestore://project_documents/$documentId';
-      final fileName = document['name'] ?? 'document.pdf';
-
-      // Save document to temporary storage and get the file path
-      final filePath =
-          await DocumentHelper.saveDocumentToTemp(firestoreUrl, fileName);
-
-      if (filePath == null) {
-        throw Exception('Failed to save document');
-      }
-
-      // Create a file URI
-      final file = File(filePath);
-      final uri = Uri.file(file.path);
-
-      // Open the file
-      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-        throw Exception('Could not open the document');
-      }
-
-      // Show success message
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Document opened successfully')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
     }
   }
 

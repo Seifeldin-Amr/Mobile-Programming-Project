@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/project.dart';
+import '../models/project_document.dart';
 
 class ProjectService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -80,10 +81,10 @@ class ProjectService {
             .toList();
       } catch (e) {
         // If index error occurs, fallback to simplified query without sorting
-        if (e.toString().contains('failed-precondition') || 
+        if (e.toString().contains('failed-precondition') ||
             e.toString().contains('requires an index')) {
           print('Index error detected, using fallback query without sorting');
-          
+
           final querySnapshot = await _firestore
               .collection('projects')
               .where('adminId', isEqualTo: user.uid)
@@ -93,10 +94,10 @@ class ProjectService {
           final projects = querySnapshot.docs
               .map((doc) => Project.fromFirestore(doc))
               .toList();
-          
+
           // Try to sort locally (might not work correctly for server timestamps)
           projects.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-          
+
           return projects;
         } else {
           // Rethrow if it's not an index-related error
@@ -130,10 +131,10 @@ class ProjectService {
             .toList();
       } catch (e) {
         // If index error occurs, fallback to simplified query without sorting
-        if (e.toString().contains('failed-precondition') || 
+        if (e.toString().contains('failed-precondition') ||
             e.toString().contains('requires an index')) {
           print('Index error detected, using fallback query without sorting');
-          
+
           final querySnapshot = await _firestore
               .collection('projects')
               .where('clientId', isEqualTo: user.uid)
@@ -143,10 +144,10 @@ class ProjectService {
           final projects = querySnapshot.docs
               .map((doc) => Project.fromFirestore(doc))
               .toList();
-          
+
           // Try to sort locally (might not work correctly for server timestamps)
           projects.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-          
+
           return projects;
         } else {
           // Rethrow if it's not an index-related error

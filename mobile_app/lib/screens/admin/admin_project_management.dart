@@ -3,6 +3,8 @@ import '../../constants/app_constants.dart';
 import '../../models/project.dart';
 import '../../services/project_service.dart';
 import 'document_upload.dart';
+import 'stage_documents_screen.dart';
+import '../../models/project_document.dart';
 
 class AdminProjectManagementScreen extends StatefulWidget {
   const AdminProjectManagementScreen({super.key});
@@ -88,18 +90,6 @@ class _AdminProjectManagementScreenState
     );
   }
 
-  void _navigateToDocumentUpload(Project project) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => DocumentUploadScreen(
-          stage: ProjectStage.stage1Planning,
-          projectId: project.id,
-        ),
-      ),
-    ).then((_) => _loadProjects());
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -137,8 +127,6 @@ class _AdminProjectManagementScreenState
                           return ProjectCard(
                             project: project,
                             onAssignClient: () => _assignClient(project),
-                            onUploadDocuments: () =>
-                                _navigateToDocumentUpload(project),
                           );
                         },
                       ),
@@ -154,13 +142,11 @@ class _AdminProjectManagementScreenState
 class ProjectCard extends StatelessWidget {
   final Project project;
   final VoidCallback onAssignClient;
-  final VoidCallback onUploadDocuments;
 
   const ProjectCard({
     super.key,
     required this.project,
     required this.onAssignClient,
-    required this.onUploadDocuments,
   });
 
   @override
@@ -242,15 +228,6 @@ class ProjectCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                 ],
-                ElevatedButton.icon(
-                  onPressed: onUploadDocuments,
-                  icon: const Icon(Icons.upload_file),
-                  label: const Text('Upload Documents'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
               ],
             ),
           ),
@@ -284,7 +261,18 @@ class ProjectCard extends StatelessWidget {
           ),
           trailing: isActive
               ? ElevatedButton.icon(
-                  onPressed: onUploadDocuments,
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => StageDocumentsScreen(
+                          projectId: project.id,
+                          projectName: project.name,
+                          stage: stage,
+                        ),
+                      ),
+                    );
+                  },
                   icon: const Icon(Icons.upload_file, size: 18),
                   label: const Text('Manage'),
                   style: ElevatedButton.styleFrom(

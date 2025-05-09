@@ -1,10 +1,40 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-
 enum ApprovalStatus {
   pending,
   approved,
   rejected,
+}
+
+extension ApprovalStatusExtension on ApprovalStatus {
+  String get displayName {
+    switch (this) {
+      case ApprovalStatus.pending:
+        return 'Pending';
+      case ApprovalStatus.approved:
+        return 'Approved';
+      case ApprovalStatus.rejected:
+        return 'Rejected';
+    }
+  }
+
+  String toJsonString() {
+    return toString().split('.').last;
+  }
+
+  static ApprovalStatus fromString(String? status) {
+    if (status == null) return ApprovalStatus.pending;
+
+    switch (status.toLowerCase()) {
+      case 'approved':
+        return ApprovalStatus.approved;
+      case 'rejected':
+        return ApprovalStatus.rejected;
+      case 'pending':
+      default:
+        return ApprovalStatus.pending;
+    }
+  }
 }
 
 class DocumentApproval {

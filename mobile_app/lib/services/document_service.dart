@@ -3,10 +3,12 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:path/path.dart' as path;
 import '../models/project_document.dart';
-import '../models/project.dart';
+import '../models/document_approval.dart';
+import '../services/approval_service.dart';
 
 class DocumentService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final ApprovalService _approvalService = ApprovalService();
 
   // Maximum file size for Firestore storage (1MB limit per document, using 900KB to be safe)
   static const int _maxFileSizeBytes = 900 * 1024; // 900KB
@@ -52,7 +54,8 @@ class DocumentService {
         'type': type.name,
         'projectId': projectId,
         'stage': stage.name,
-        'uploadedBy': '', // Set this if you have current user info
+        'approvalStatus':
+            'pending', // Mark document as pending approval by client
       };
 
       // Step 4: Store in Firestore - both as a separate document and in the project
@@ -100,6 +103,51 @@ class DocumentService {
     }
   }
 
+  // Get all documents for a specific project and stage with their approval status
+  Future<Map<String, dynamic>> getProjectDocumentsWithApproval(
+      String projectId, ProjectStage stage) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('project_documents')
+          .where('projectId', isEqualTo: projectId)
+          .where('stage', isEqualTo: stage.name)
+          .orderBy('uploadDate', descending: true)
+          .get();
+
+      List<Map<String, dynamic>> documents = [];
+      Map<String, ApprovalStatus?> approvalStatus = {};
+
+      for (var doc in querySnapshot.docs) {
+        var data = doc.data();
+        data['id'] = doc.id;
+
+        // Check approval status
+        ApprovalStatus? status =
+            await _approvalService.getDocumentApprovalStatus(doc.id);
+        approvalStatus[doc.id] = status;
+
+        // Group by document type
+        DocumentType type = DocumentType.values.firstWhere(
+          (e) => e.toString().split('.').last == data['type'],
+          orElse: () => DocumentType.meetingSummary,
+        );
+
+        documents.add({
+          ...data,
+          'documentType': type,
+        });
+      }
+
+      return {
+        'documents': documents,
+        'approvalStatus': approvalStatus,
+      };
+    } catch (e) {
+      print('❌ Error loading documents with approval status: $e');
+      throw Exception('Failed to load documents: $e');
+    }
+  }
+
   // Get all documents for a specific project and stage (directly from project_documents collection)
   Future<List<ProjectDocument>> getDocumentsByProjectAndStage(
       String projectId, ProjectStage stage) async {
@@ -131,10 +179,8 @@ class DocumentService {
     } catch (e) {
       print('❌ Failed to retrieve documents: $e');
       return [];
-      
     }
   }
-  
 
   // Get a single document with its full content
   Future<Map<String, dynamic>?> getDocumentWithContent(
@@ -219,6 +265,62 @@ class DocumentService {
     } catch (e) {
       print('❌ Error deleting document: $e');
       throw Exception('Failed to delete document: $e');
+    }
+  }
+
+  // Update a document (e.g., to change approval status)
+  Future<void> updateDocument(ProjectDocument document) async {
+    try {
+      final documentId = document.id;
+
+      // 1. Update in the project_documents collection
+      await _firestore.collection('project_documents').doc(documentId).update({
+        'approvalStatus': document.approvalStatus,
+        'lastUpdated': FieldValue.serverTimestamp(),
+      });
+
+      print('✅ Document approval status updated in Firestore');
+
+      // 2. Update the reference in the project's stage documents
+      final projectRef =
+          _firestore.collection('projects').doc(document.projectId);
+      final projectDoc = await projectRef.get();
+
+      if (projectDoc.exists) {
+        final projectData = projectDoc.data()!;
+        final stagesData = projectData['stages'] as Map<String, dynamic>?;
+        // Using the string value directly, not trying to access .name on a String
+        final stageName = document.stage ?? 'stage1Planning';
+
+        if (stagesData != null && stagesData.containsKey(stageName)) {
+          final stageData = stagesData[stageName] as Map<String, dynamic>;
+
+          if (stageData.containsKey('documents')) {
+            List<dynamic> documents = List.from(stageData['documents'] ?? []);
+
+            // Find and update the document in the array
+            for (int i = 0; i < documents.length; i++) {
+              if (documents[i]['id'] == documentId) {
+                // Update the document approval status
+                documents[i]['approvalStatus'] = document.approvalStatus;
+                break;
+              }
+            }
+
+            // Update the project with the modified documents array
+            await projectRef.update({
+              'stages.$stageName.documents': documents,
+              'stages.$stageName.lastUpdated': FieldValue.serverTimestamp(),
+            });
+
+            print(
+                '✅ Document reference updated in project stage documents array');
+          }
+        }
+      }
+    } catch (e) {
+      print('❌ Error updating document: $e');
+      throw Exception('Failed to update document: $e');
     }
   }
 
