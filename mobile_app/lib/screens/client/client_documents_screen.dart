@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import 'dart:io';
 import '../../models/project_document.dart';
 import '../../models/document_approval.dart';
 import '../../services/approval_service.dart';
@@ -29,6 +28,7 @@ class _ClientDocumentsScreenState extends State<ClientDocumentsScreen>
   final _approvalService = ApprovalService();
   final _documentService = DocumentService();
   bool _isLoading = true;
+  bool _isProcessing = false;
   List<Map<String, dynamic>> _documents = [];
   Map<String, ApprovalStatus?> _documentApprovalStatus = {};
 
@@ -46,6 +46,8 @@ class _ClientDocumentsScreenState extends State<ClientDocumentsScreen>
   }
 
   Future<void> _loadDocuments() async {
+    if (_isProcessing) return; // Prevent multiple simultaneous loads
+
     setState(() {
       _isLoading = true;
     });
@@ -65,9 +67,11 @@ class _ClientDocumentsScreenState extends State<ClientDocumentsScreen>
       setState(() {
         _isLoading = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading documents: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading documents: $e')),
+        );
+      }
     }
   }
 
@@ -99,38 +103,105 @@ class _ClientDocumentsScreenState extends State<ClientDocumentsScreen>
   }
 
   Future<void> _showApprovalDialog(Map<String, dynamic> document) async {
+    final documentId = document['id']?.toString();
+    if (documentId == null || documentId.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error: Document ID is missing')),
+        );
+      }
+      return;
+    }
+
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (context) => DocumentApprovalDialog(
-        documentName: document['name'],
+        documentName: document['name'] ?? 'Unnamed Document',
       ),
     );
 
     if (result != null) {
-      final bool isApproved = result['isApproved'];
-      final String? comments = result['comments'];
+      final bool isApproved = result['isApproved'] == true;
+      // Ensure comments is never null - use empty string instead
+      final String comments = result['comments']?.toString() ?? '';
 
       try {
+        setState(() {
+          _isProcessing = true;
+        });
+
+        final status =
+            isApproved ? ApprovalStatus.approved : ApprovalStatus.rejected;
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Processing approval...')),
+          );
+        }
+
+        // Local state update with null safety
+        try {
+          setState(() {
+            _documentApprovalStatus[documentId] = status;
+
+            for (int i = 0; i < _documents.length; i++) {
+              if (_documents[i]['id']?.toString() == documentId) {
+                final statusString = status.toString().split('.').last;
+                _documents[i]['approvalStatus'] = statusString;
+                break;
+              }
+            }
+          });
+        } catch (uiError) {
+          print("UI update error: $uiError");
+        }
+
+        // Server call
         await _approvalService.processDocumentApproval(
-          documentId: document['id'],
+          documentId: documentId,
           projectId: widget.projectId,
-          status:
-              isApproved ? ApprovalStatus.approved : ApprovalStatus.rejected,
-          comments: comments,
+          status: status,
+          comments: comments, // Will be correctly handled by updated service
         );
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+        // Sync with latest DB state
+        await Future.delayed(const Duration(milliseconds: 300));
+        if (mounted) {
+          final result = await _documentService.getProjectDocumentsWithApproval(
+            widget.projectId,
+            ProjectStage.stage1Planning,
+          );
+
+          setState(() {
+            _documents = result['documents'] as List<Map<String, dynamic>>;
+            _documentApprovalStatus =
+                result['approvalStatus'] as Map<String, ApprovalStatus?>;
+          });
+        }
+
+        // Show success
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
               content: Text(
-                  'Document ${isApproved ? 'approved' : 'rejected'} successfully')),
-        );
-
-        // Refresh document list
-        _loadDocuments();
+                'Document ${isApproved ? 'approved' : 'rejected'} successfully',
+              ),
+            ),
+          );
+        }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        // Catch any remaining errors
+        print('Error processing approval: $e');
+        await _loadDocuments();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: $e')),
+          );
+        }
+      } finally {
+        setState(() {
+          _isProcessing = false;
+        });
       }
     }
   }
@@ -335,7 +406,6 @@ class _ClientDocumentsScreenState extends State<ClientDocumentsScreen>
         color = Colors.red;
         break;
       case ApprovalStatus.pending:
-      default:
         icon = Icons.pending;
         text = 'Pending';
         color = Colors.orange;

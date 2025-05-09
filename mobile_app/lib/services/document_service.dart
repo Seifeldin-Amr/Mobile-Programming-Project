@@ -56,6 +56,7 @@ class DocumentService {
         'stage': stage.name,
         'approvalStatus':
             'pending', // Mark document as pending approval by client
+        'uploadedBy': 'userId', // Replace with actual user ID if needed
       };
 
       // Step 4: Store in Firestore - both as a separate document and in the project

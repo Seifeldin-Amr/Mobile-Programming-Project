@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../models/project_document.dart';
 import '../models/document_approval.dart';
 import 'notification_service.dart';
 
@@ -14,12 +13,14 @@ class ApprovalService {
     required String documentId,
     required String projectId,
     required ApprovalStatus status,
-    String? comments,
+    required String? comments,
   }) async {
     try {
-      // Validate inputs
-      if (status == ApprovalStatus.rejected &&
-          (comments == null || comments.isEmpty)) {
+      final commentsStr =
+          comments ?? ''; // Convert possible null to empty string
+
+      // Validate inputs - only check if empty when rejected
+      if (status == ApprovalStatus.rejected && commentsStr.isEmpty) {
         throw Exception('Comments are required when rejecting a document');
       }
 
@@ -48,7 +49,9 @@ class ApprovalService {
         userId: user.uid,
         status: status,
         timestamp: DateTime.now(),
-        comments: comments,
+        comments: commentsStr,
+        
+        
       );
 
       // Add to Firestore
@@ -65,10 +68,11 @@ class ApprovalService {
       if (status == ApprovalStatus.approved) {
         updateData['approvedBy'] = user.uid;
         updateData['approvalDate'] = FieldValue.serverTimestamp();
+        updateData['approvalComments'] = commentsStr;
       } else if (status == ApprovalStatus.rejected) {
         updateData['rejectedBy'] = user.uid;
         updateData['rejectionDate'] = FieldValue.serverTimestamp();
-        updateData['rejectionComments'] = comments;
+        updateData['rejectionComments'] = commentsStr;
       }
 
       // Update document in Firestore
@@ -77,17 +81,22 @@ class ApprovalService {
           .doc(documentId)
           .update(updateData);
 
-      // Get admin ID (for notification)
-      final adminId = docData['uploadedBy'];
+      // Get admin ID (for notification) - Fix null issue by defaulting to a system ID if not found
+      final adminId = docData['uploadedBy'] as String? ?? 'system';
 
-      // Send notification to admin
-      await _notificationService.sendDocumentApprovalNotification(
-        adminId: adminId,
-        documentTitle: documentName,
-        documentId: documentId,
-        projectId: projectId,
-        status: status,
-      );
+      // Only send notification if we have a valid admin ID
+      if (adminId != 'system') {
+        // Send notification to admin
+        await _notificationService.sendDocumentApprovalNotification(
+          adminId: adminId,
+          documentTitle: documentName,
+          documentId: documentId,
+          projectId: projectId,
+          status: status,
+        );
+      } else {
+        print('⚠️ No admin ID found for document, notification not sent');
+      }
     } catch (e) {
       throw Exception('Failed to process document approval: $e');
     }
@@ -101,6 +110,27 @@ class ApprovalService {
         return null;
       }
 
+      // First try to get the status directly from the document
+      final docSnapshot = await _firestore
+          .collection('project_documents')
+          .doc(documentId)
+          .get();
+
+      if (docSnapshot.exists) {
+        final data = docSnapshot.data()!;
+        if (data.containsKey('approvalStatus')) {
+          final statusString = data['approvalStatus'] as String?;
+          if (statusString != null && statusString != 'pending') {
+            // If document already has a non-pending status, use that
+            return ApprovalStatus.values.firstWhere(
+              (e) => e.toString().split('.').last == statusString,
+              orElse: () => ApprovalStatus.pending,
+            );
+          }
+        }
+      }
+
+      // Otherwise check for approvals in the approvals collection
       final querySnapshot = await _firestore
           .collection('document_approvals')
           .where('documentId', isEqualTo: documentId)
@@ -110,16 +140,24 @@ class ApprovalService {
           .get();
 
       if (querySnapshot.docs.isEmpty) {
-        return null;
+        return ApprovalStatus.pending;
       }
 
       final approvalData = querySnapshot.docs.first.data();
+      final statusString = approvalData['status'] as String?;
+
+      if (statusString == null) {
+        return ApprovalStatus.pending;
+      }
+
       return ApprovalStatus.values.firstWhere(
-        (e) => e.toString().split('.').last == approvalData['status'],
+        (e) => e.toString().split('.').last == statusString,
         orElse: () => ApprovalStatus.pending,
       );
     } catch (e) {
-      throw Exception('Failed to get document approval status: $e');
+      print('Failed to get document approval status: $e');
+      // Don't throw an exception, just return pending status
+      return ApprovalStatus.pending;
     }
   }
 }

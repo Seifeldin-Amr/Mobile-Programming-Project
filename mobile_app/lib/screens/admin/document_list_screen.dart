@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../models/project.dart';
 import '../../models/project_document.dart';
-import '../../models/document_approval.dart';
 import '../../services/document_service.dart';
 import 'document_upload.dart';
 
@@ -39,6 +36,39 @@ class _DocumentListScreenState extends State<DocumentListScreen> {
     super.initState();
     // Initialize with the documents passed in
     _documents = List.from(widget.documents);
+
+    // Fetch complete document data with comments when initializing
+    _fetchDocumentComments();
+  }
+
+  // New method to fetch document comments separately
+  Future<void> _fetchDocumentComments() async {
+    // Skip if no documents or already loading
+    if (_documents.isEmpty || _isLoading) return;
+
+    try {
+      // Fetch full document data for each document to get comments
+      for (int i = 0; i < _documents.length; i++) {
+        final docId = _documents[i]['id'];
+        if (docId != null) {
+          final fullDoc = await _documentService.getDocumentWithContent(docId);
+          if (fullDoc != null && mounted) {
+            setState(() {
+              // Update with approval/rejection comments if they exist
+              if (fullDoc['approvalComments'] != null) {
+                _documents[i]['approvalComments'] = fullDoc['approvalComments'];
+              }
+              if (fullDoc['rejectionComments'] != null) {
+                _documents[i]['rejectionComments'] =
+                    fullDoc['rejectionComments'];
+              }
+            });
+          }
+        }
+      }
+    } catch (e) {
+      print('Error fetching document comments: $e');
+    }
   }
 
   Future<void> _refreshDocuments() async {
@@ -64,6 +94,9 @@ class _DocumentListScreenState extends State<DocumentListScreen> {
         _documents = filteredDocs;
         _isLoading = false;
       });
+
+      // After refreshing the document list, fetch the complete data with comments
+      _fetchDocumentComments();
     } catch (e) {
       setState(() {
         _isLoading = false;
@@ -135,27 +168,7 @@ class _DocumentListScreenState extends State<DocumentListScreen> {
     if (confirmed == true) {
       _deleteDocument(document);
     }
-  }
-
-  Future<void> _updateApprovalStatus(
-      Map<String, dynamic> document, String status) async {
-    try {
-      // Convert map to ProjectDocument object
-      final projectDoc = ProjectDocument.fromMap(document);
-      projectDoc.approvalStatus = status;
-
-      await _documentService.updateDocument(projectDoc);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Document $status successfully')),
-      );
-
-      _refreshDocuments();
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error updating approval status: $e')),
-      );
-    }
+    setState(() {});
   }
 
   @override
@@ -230,6 +243,10 @@ class _DocumentListScreenState extends State<DocumentListScreen> {
     // Get approval status if available
     String? approvalStatus = document['approvalStatus'];
 
+    // Check for any comments to display (rejection or approval)
+    final String? rejectionComments = document['rejectionComments'];
+    final String? approvalComments = document['approvalComments'];
+
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
@@ -289,6 +306,80 @@ class _DocumentListScreenState extends State<DocumentListScreen> {
             Padding(
               padding: const EdgeInsets.all(16),
               child: Text(document['description']),
+            ),
+
+          // Rejection comments (if document was rejected)
+          if (approvalStatus?.toLowerCase() == 'rejected' &&
+              rejectionComments != null &&
+              rejectionComments.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.all(16),
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.withOpacity(0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.comment, color: Colors.red, size: 18),
+                      SizedBox(width: 8),
+                      Text(
+                        'Rejection Reason:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    rejectionComments,
+                    style: const TextStyle(fontStyle: FontStyle.italic),
+                  ),
+                ],
+              ),
+            ),
+
+          // Approval comments (if document was approved and has comments)
+          if (approvalStatus?.toLowerCase() == 'approved' &&
+              approvalComments != null &&
+              approvalComments.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.all(16),
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green.withOpacity(0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.comment, color: Colors.green, size: 18),
+                      SizedBox(width: 8),
+                      Text(
+                        'Approval Comments:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    approvalComments,
+                    style: const TextStyle(fontStyle: FontStyle.italic),
+                  ),
+                ],
+              ),
             ),
 
           // Actions

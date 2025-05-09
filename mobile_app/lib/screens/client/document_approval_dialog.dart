@@ -66,24 +66,26 @@ class _DocumentApprovalDialogState extends State<DocumentApprovalDialog> {
             controller: _commentsController,
             decoration: InputDecoration(
               labelText: _isApproved
-                  ? 'Comments (Optional)'
+                  ? 'Comments (Recommended)'
                   : 'Reason for Rejection (Required)',
               border: const OutlineInputBorder(),
             ),
             maxLines: 3,
           ),
 
-          if (!_isApproved)
-            const Padding(
-              padding: EdgeInsets.only(top: 8),
-              child: Text(
-                'Please provide feedback on why this document is being rejected.',
-                style: TextStyle(
-                  color: Colors.red,
-                  fontSize: 12,
-                ),
+          // Guidance text based on approval status
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              _isApproved
+                  ? 'Adding comments for approval is recommended to provide feedback.'
+                  : 'Please provide feedback on why this document is being rejected.',
+              style: TextStyle(
+                color: _isApproved ? Colors.blue[700] : Colors.red,
+                fontSize: 12,
               ),
             ),
+          ),
         ],
       ),
       actions: [
@@ -104,7 +106,9 @@ class _DocumentApprovalDialogState extends State<DocumentApprovalDialog> {
 
             Navigator.of(context).pop({
               'isApproved': _isApproved,
-              'comments': _commentsController.text,
+              'comments': _commentsController.text.isEmpty
+                  ? (_isApproved ? 'Document approved' : '')
+                  : _commentsController.text,
             });
           },
           style: ElevatedButton.styleFrom(

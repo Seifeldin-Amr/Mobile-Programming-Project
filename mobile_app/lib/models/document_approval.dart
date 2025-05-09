@@ -63,7 +63,8 @@ class DocumentApproval {
       'userId': userId,
       'status': status.toString().split('.').last,
       'timestamp': timestamp,
-      'comments': comments,
+      'comments': comments ??
+          '', // Ensure comments is never null when saved to Firestore
     };
   }
 
