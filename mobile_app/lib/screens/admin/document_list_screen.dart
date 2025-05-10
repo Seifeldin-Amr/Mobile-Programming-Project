@@ -3,6 +3,11 @@ import 'package:intl/intl.dart';
 import '../../models/project_document.dart';
 import '../../services/document_service.dart';
 import 'document_upload.dart';
+import '../../widgets/pdf_viewer_screen.dart';
+import 'dart:convert';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'dart:typed_data';
 
 class DocumentListScreen extends StatefulWidget {
   final String projectId;
@@ -19,7 +24,7 @@ class DocumentListScreen extends StatefulWidget {
     required this.stage,
     required this.documentType,
     required this.documents,
-    this.allowUpload = true, // Default to true for backward compatibility
+    this.allowUpload = true,
   });
 
   @override
@@ -37,20 +42,21 @@ class _DocumentListScreenState extends State<DocumentListScreen> {
     // Initialize with the documents passed in
     _documents = List.from(widget.documents);
 
-    // Fetch complete document data with comments when initializing
+    // Fetch document comments if needed
     _fetchDocumentComments();
   }
 
-  // New method to fetch document comments separately
+  // Method to fetch document comments separately
   Future<void> _fetchDocumentComments() async {
     // Skip if no documents or already loading
     if (_documents.isEmpty || _isLoading) return;
 
     try {
-      // Fetch full document data for each document to get comments
+      // Fetch comments for each document
       for (int i = 0; i < _documents.length; i++) {
         final docId = _documents[i]['id'];
         if (docId != null) {
+          print("Fetching comments for document: $docId");
           final fullDoc = await _documentService.getDocumentWithContent(docId);
           if (fullDoc != null && mounted) {
             setState(() {
@@ -240,6 +246,12 @@ class _DocumentListScreenState extends State<DocumentListScreen> {
     final uploadDate = (document['uploadDate'] as DateTime?) ?? DateTime.now();
     final formattedDate = DateFormat('MMM dd, yyyy').format(uploadDate);
 
+    // Debug print to check document content
+    print("Building card for document: ${document['id']}");
+    print("Document has fileContent: ${document.containsKey('fileContent')}");
+    print(
+        "Document fileContent length: ${document['fileContent']?.length ?? 'null'}");
+
     // Get approval status if available
     String? approvalStatus = document['approvalStatus'];
 
@@ -393,13 +405,69 @@ class _DocumentListScreenState extends State<DocumentListScreen> {
                   children: [
                     // Preview Button - could be implemented to open the document
                     OutlinedButton.icon(
-                      onPressed: () {
-                        // TODO: Implement document preview
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content:
-                                  Text('Document preview not implemented')),
-                        );
+                      onPressed: () async {
+                        final docId = document['id'];
+                        final docName = document['name'] ?? 'temp_document';
+
+                        if (docId == null) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('Document ID is missing.')),
+                            );
+                          }
+                          return;
+                        }
+
+                        try {
+                          // Get fileContent from document
+                          final String? base64String = document['fileContent'];
+
+                          if (base64String == null) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text(
+                                        'Document content not available.')),
+                              );
+                            }
+                            return;
+                          }
+
+                          final String fileName = document['name'] ?? docName;
+
+                          Uint8List bytes;
+                          try {
+                            bytes = base64Decode(base64String);
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                    content:
+                                        Text('Error decoding document: $e')),
+                              );
+                            }
+                            return;
+                          }
+
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => PdfViewerScreen(
+                                pdfData: bytes,
+                                documentName: fileName,
+                              ),
+                            ),
+                          );
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                  content:
+                                      Text('Error previewing document: $e')),
+                            );
+                          }
+                        }
                       },
                       icon: const Icon(Icons.visibility),
                       label: const Text('Preview'),

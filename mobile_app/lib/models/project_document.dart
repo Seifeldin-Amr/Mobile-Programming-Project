@@ -46,7 +46,6 @@ extension ProjectStageExtension on ProjectStage {
 class ProjectDocument {
   final String id;
   final String name;
-  final String url;
   final DocumentType type;
   final String projectId;
   final DateTime uploadDate;
@@ -54,11 +53,11 @@ class ProjectDocument {
   final String description;
   String? approvalStatus;
   final String? stage;
+  final String? fileContent;
 
   ProjectDocument({
     required this.id,
     required this.name,
-    required this.url,
     required this.type,
     required this.projectId,
     required this.uploadDate,
@@ -66,6 +65,7 @@ class ProjectDocument {
     this.description = '',
     this.approvalStatus,
     this.stage,
+    this.fileContent,
   });
 
   // Create from Firestore map
@@ -73,7 +73,6 @@ class ProjectDocument {
     return ProjectDocument(
       id: data['id'] ?? '',
       name: data['name'] ?? 'Unnamed document',
-      url: data['url'] ?? '',
       type: _getDocumentTypeFromString(data['type'] ?? 'other'),
       projectId: data['projectId'] ?? '',
       uploadDate: (data['uploadDate'] is Timestamp)
@@ -83,6 +82,7 @@ class ProjectDocument {
       description: data['description'] ?? '',
       approvalStatus: data['approvalStatus'],
       stage: data['stage'],
+      fileContent: data['fileContent'],
     );
   }
 
@@ -90,7 +90,6 @@ class ProjectDocument {
   Map<String, dynamic> toMap() {
     return {
       'name': name,
-      'url': url,
       'type': type.toString().split('.').last,
       'projectId': projectId,
       'uploadDate': uploadDate,
@@ -98,6 +97,7 @@ class ProjectDocument {
       'description': description,
       'approvalStatus': approvalStatus,
       'stage': stage,
+      'fileContent': fileContent,
     };
   }
 

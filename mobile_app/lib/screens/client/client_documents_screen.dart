@@ -1,6 +1,10 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:mobile_app/widgets/pdf_viewer_screen.dart';
 import '../../models/project_document.dart';
 import '../../models/document_approval.dart';
 import '../../services/approval_service.dart';
@@ -80,7 +84,7 @@ class _ClientDocumentsScreenState extends State<ClientDocumentsScreen>
   }
 
   // A simplified method that uses DocumentHelper utility
-  Future<void> _downloadAndOpenDocument(Map<String, dynamic> document) async {
+  Future<void> _downloadDocument(Map<String, dynamic> document) async {
     // Show loading indicator
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Preparing document...')),
@@ -91,7 +95,6 @@ class _ClientDocumentsScreenState extends State<ClientDocumentsScreen>
       base64Content: document['fileContent'] as String?,
       fileName: (document['name'] as String?) ?? 'document.pdf',
       context: context,
-      openAfterDownload: true,
     );
 
     // Handle the result
@@ -360,9 +363,32 @@ class _ClientDocumentsScreenState extends State<ClientDocumentsScreen>
                   children: [
                     // Download Button
                     OutlinedButton.icon(
-                      onPressed: () => _downloadAndOpenDocument(document),
+                      onPressed: () => _downloadDocument(document),
                       icon: const Icon(Icons.download),
                       label: const Text('Download'),
+                    ),
+                    SizedBox(width: 8),
+                     OutlinedButton.icon(
+                      onPressed: () {
+                        Uint8List bytes;
+                        try {
+                          bytes = base64Decode(document['fileContent']);
+                        } catch (e) {
+                          print('Error decoding document: $e');
+                          return;
+                        }
+                        Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => PdfViewerScreen(
+                                    pdfData: bytes,
+                                    documentName: document['name'],
+                                  ),
+                                ),
+                              );
+                      },
+                      icon: const Icon(Icons.visibility),
+                      label: const Text('Preview'),
                     ),
                     const SizedBox(width: 12),
 

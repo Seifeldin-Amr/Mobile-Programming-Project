@@ -169,12 +169,7 @@ class DocumentService {
       // Convert query results to ProjectDocument objects
       return querySnapshot.docs.map((doc) {
         final data = doc.data();
-        // Add document ID if not already included
         data['id'] = doc.id;
-        // Do not include the fileContent field to reduce payload size
-        data.remove('fileContent');
-        // Add URL for document retrieval
-        data['url'] = 'firestore://project_documents/${doc.id}';
         return ProjectDocument.fromMap(data);
       }).toList();
     } catch (e) {
