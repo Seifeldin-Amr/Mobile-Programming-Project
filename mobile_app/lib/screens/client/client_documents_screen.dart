@@ -412,7 +412,7 @@ class _ClientDocumentsScreenState extends State<ClientDocumentsScreen>
                         icon: const Icon(Icons.check_circle,
                             size: 32, color: Colors.white),
                         label: const Text('Approve',
-                            style: TextStyle(fontSize: 12))
+                            style: TextStyle(fontSize: 12)),
                         style: ElevatedButton.styleFrom(
                           backgroundColor:
                               Theme.of(context).colorScheme.primary,
