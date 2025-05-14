@@ -6,7 +6,6 @@ import '../widgets/custom_app_bar.dart';
 import '../services/auth_service.dart';
 import '../services/admin_service.dart';
 import 'auth/login.dart';
-import 'admin/admin_dashboard.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -46,8 +45,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
     }
   }
-
- 
 
   @override
   Widget build(BuildContext context) {
@@ -127,22 +124,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         'Settings',
                         () {},
                       ),
-                      const SizedBox(height: AppConstants.defaultPadding),
-                      if (_isAdmin)
-                        _buildOptionCard(
-                          context,
-                          Icons.admin_panel_settings,
-                          'Admin Dashboard',
-                          () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const AdminDashboard(),
-                              ),
-                            );
-                          },
-                          color: Colors.purple.shade800,
-                        ),
                       const SizedBox(height: AppConstants.defaultPadding),
                       _buildLogoutButton(context),
                     ],

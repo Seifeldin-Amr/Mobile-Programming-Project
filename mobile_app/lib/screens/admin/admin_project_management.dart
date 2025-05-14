@@ -5,6 +5,7 @@ import '../../services/project_service.dart';
 import 'document_upload.dart';
 import 'stage_documents_screen.dart';
 import '../../models/project_document.dart';
+import 'project_details_screen.dart';
 
 class AdminProjectManagementScreen extends StatefulWidget {
   const AdminProjectManagementScreen({super.key});
@@ -206,13 +207,7 @@ class ProjectCard extends StatelessWidget {
             ),
           ),
 
-          // Project Stages
-          ExpansionTile(
-            title: const Text('Project Stages'),
-            children: [
-              _buildStagesList(context),
-            ],
-          ),
+         
 
           // Actions
           Padding(
@@ -220,13 +215,31 @@ class ProjectCard extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ProjectDetailsScreen(
+                          projectId: project.id,
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.visibility),
+                  label: const Text('View Details'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 8),
                 if (project.clientId == null) ...[
                   TextButton.icon(
                     onPressed: onAssignClient,
                     icon: const Icon(Icons.person_add),
                     label: const Text('Assign Client'),
                   ),
-                  const SizedBox(width: 8),
                 ],
               ],
             ),
@@ -236,72 +249,9 @@ class ProjectCard extends StatelessWidget {
     );
   }
 
-  Widget _buildStagesList(BuildContext context) {
-    return Column(
-      children: ProjectStage.values.map((stage) {
-        final isActive = stage ==
-            ProjectStage.stage1Planning; // Currently only stage 1 is active
-        final stageStatus = project.getStageStatus(stage);
-        final documentCount = project.getStageDocumentCount(stage);
+  
 
-        return ListTile(
-          title: Text(stage.displayName),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Status: $stageStatus'),
-              Text('Documents: $documentCount'),
-            ],
-          ),
-          isThreeLine: true,
-          leading: Icon(
-            _getStageIcon(stage),
-            color:
-                isActive ? Theme.of(context).colorScheme.primary : Colors.grey,
-          ),
-          trailing: isActive
-              ? ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => StageDocumentsScreen(
-                          projectId: project.id,
-                          projectName: project.name,
-                          stage: stage,
-                        ),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.upload_file, size: 18),
-                  label: const Text('Manage'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    textStyle: const TextStyle(fontSize: 12),
-                  ),
-                )
-              : const Icon(Icons.lock),
-          enabled: isActive,
-        );
-      }).toList(),
-    );
-  }
-
-  IconData _getStageIcon(ProjectStage stage) {
-    switch (stage) {
-      case ProjectStage.stage1Planning:
-        return Icons.edit_note;
-      case ProjectStage.stage2Design:
-        return Icons.architecture;
-      case ProjectStage.stage3Execution:
-        return Icons.construction;
-      case ProjectStage.stage4Completion:
-        return Icons.check_circle;
-    }
-  }
+  
 
   Widget _buildStatusBadge(BuildContext context) {
     Color color;

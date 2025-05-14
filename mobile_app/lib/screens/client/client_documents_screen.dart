@@ -125,7 +125,6 @@ class _ClientDocumentsScreenState extends State<ClientDocumentsScreen>
 
     if (result != null) {
       final bool isApproved = result['isApproved'] == true;
-      // Ensure comments is never null - use empty string instead
       final String comments = result['comments']?.toString() ?? '';
 
       try {
@@ -142,7 +141,6 @@ class _ClientDocumentsScreenState extends State<ClientDocumentsScreen>
           );
         }
 
-        // Local state update with null safety
         try {
           setState(() {
             _documentApprovalStatus[documentId] = status;
@@ -357,18 +355,25 @@ class _ClientDocumentsScreenState extends State<ClientDocumentsScreen>
 
               // Document Actions
               Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     // Download Button
                     OutlinedButton.icon(
                       onPressed: () => _downloadDocument(document),
-                      icon: const Icon(Icons.download),
-                      label: const Text('Download'),
+                      icon: const Icon(Icons.download, size: 32),
+                      label: const Text('Download',
+                          style: TextStyle(fontSize: 12)),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
                     ),
-                    SizedBox(width: 8),
-                     OutlinedButton.icon(
+                    const SizedBox(width: 8),
+                    OutlinedButton.icon(
                       onPressed: () {
                         Uint8List bytes;
                         try {
@@ -378,31 +383,44 @@ class _ClientDocumentsScreenState extends State<ClientDocumentsScreen>
                           return;
                         }
                         Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => PdfViewerScreen(
-                                    pdfData: bytes,
-                                    documentName: document['name'],
-                                  ),
-                                ),
-                              );
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => PdfViewerScreen(
+                              pdfData: bytes,
+                              documentName: document['name'],
+                            ),
+                          ),
+                        );
                       },
-                      icon: const Icon(Icons.visibility),
-                      label: const Text('Preview'),
+                      icon: const Icon(Icons.visibility, size: 32),
+                      label:
+                          const Text('Preview', style: TextStyle(fontSize: 12)),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 8),
 
                     // Approve/Reject Button
                     if (approvalStatus != ApprovalStatus.approved &&
                         approvalStatus != ApprovalStatus.rejected)
                       ElevatedButton.icon(
                         onPressed: () => _showApprovalDialog(document),
-                        icon: const Icon(Icons.check_circle),
-                        label: const Text('Approve'),
+                        icon: const Icon(Icons.check_circle,
+                            size: 32, color: Colors.white),
+                        label: const Text('Approve',
+                            style: TextStyle(fontSize: 12)),
                         style: ElevatedButton.styleFrom(
                           backgroundColor:
                               Theme.of(context).colorScheme.primary,
                           foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
                       ),
                   ],

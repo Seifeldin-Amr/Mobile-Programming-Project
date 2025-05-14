@@ -2,11 +2,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/document_approval.dart';
 import 'notification_service.dart';
+import 'project_service.dart';
 
 class ApprovalService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final NotificationService _notificationService = NotificationService();
+  final ProjectService _projectService = ProjectService();
 
   // Process document approval (approve or reject)
   Future<void> processDocumentApproval({
@@ -50,8 +52,6 @@ class ApprovalService {
         status: status,
         timestamp: DateTime.now(),
         comments: commentsStr,
-        
-        
       );
 
       // Add to Firestore
@@ -96,6 +96,11 @@ class ApprovalService {
         );
       } else {
         print('⚠️ No admin ID found for document, notification not sent');
+      }
+
+      // If the document was approved, check if we can advance project stages
+      if (status == ApprovalStatus.approved) {
+        await _projectService.checkAndAdvanceProjectStages(projectId);
       }
     } catch (e) {
       throw Exception('Failed to process document approval: $e');

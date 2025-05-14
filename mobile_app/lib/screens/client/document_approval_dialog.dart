@@ -32,10 +32,16 @@ class _DocumentApprovalDialogState extends State<DocumentApprovalDialog> {
         children: [
           // Approval Options
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              Expanded(
+              SizedBox(
+                width: 140, // Fixed width to prevent text wrapping
                 child: RadioListTile<bool>(
-                  title: const Text('Approve'),
+                  title: const Text(
+                    'Approve',
+                    overflow: TextOverflow.visible,
+                    softWrap: false,
+                  ),
                   value: true,
                   groupValue: _isApproved,
                   onChanged: (value) {
@@ -45,9 +51,14 @@ class _DocumentApprovalDialogState extends State<DocumentApprovalDialog> {
                   },
                 ),
               ),
-              Expanded(
+              SizedBox(
+                width: 140, // Fixed width to prevent text wrapping
                 child: RadioListTile<bool>(
-                  title: const Text('Reject'),
+                  title: const Text(
+                    'Reject',
+                    overflow: TextOverflow.visible,
+                    softWrap: false,
+                  ),
                   value: false,
                   groupValue: _isApproved,
                   onChanged: (value) {
