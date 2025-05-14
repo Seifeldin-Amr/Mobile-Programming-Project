@@ -260,4 +260,46 @@ class ProjectService {
       throw Exception('Failed to delete project: $e');
     }
   }
+
+  // Check and update stages based on document approvals
+  Future<void> checkAndAdvanceProjectStages(String projectId) async {
+    try {
+      // 1. Get the project document
+      final projectDoc =
+          await _firestore.collection('projects').doc(projectId).get();
+      if (!projectDoc.exists) {
+        throw Exception('Project not found');
+      }
+
+      // 2. Get all approved documents in stage 1
+      final querySnapshot = await _firestore
+          .collection('project_documents')
+          .where('projectId', isEqualTo: projectId)
+          .where('stage', isEqualTo: 'stage1Planning')
+          .where('approvalStatus', isEqualTo: 'approved')
+          .get();
+
+      // 3. Check if we have at least 3 approved documents
+      if (querySnapshot.docs.length >= 3) {
+        print(
+            'Found ${querySnapshot.docs.length} approved documents in stage 1, advancing project stages');
+
+        // 4. Update the project stages
+        await _firestore.collection('projects').doc(projectId).update({
+          'stages.stage1Planning.status': 'completed',
+          'stages.stage1Planning.completedAt': FieldValue.serverTimestamp(),
+          'stages.stage2Design.status': 'pending',
+          'stages.stage2Design.startedAt': FieldValue.serverTimestamp(),
+        });
+
+        print('Project stages updated successfully');
+      } else {
+        print(
+            'Not enough approved documents (${querySnapshot.docs.length}/3) to advance project stages');
+      }
+    } catch (e) {
+      print('Error checking/advancing project stages: $e');
+      throw Exception('Failed to advance project stages: $e');
+    }
+  }
 }
