@@ -1,12 +1,14 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'dart:io';
+import 'package:mobile_app/widgets/pdf_viewer_screen.dart';
 import '../../models/project_document.dart';
-import '../../models/project.dart';
 import '../../models/document_approval.dart';
 import '../../services/approval_service.dart';
+import '../../services/document_service.dart';
 import '../../utils/document_helper.dart';
 import 'document_approval_dialog.dart';
 
@@ -28,7 +30,9 @@ class _ClientDocumentsScreenState extends State<ClientDocumentsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final _approvalService = ApprovalService();
+  final _documentService = DocumentService();
   bool _isLoading = true;
+  bool _isProcessing = false;
   List<Map<String, dynamic>> _documents = [];
   Map<String, ApprovalStatus?> _documentApprovalStatus = {};
 
@@ -46,55 +50,32 @@ class _ClientDocumentsScreenState extends State<ClientDocumentsScreen>
   }
 
   Future<void> _loadDocuments() async {
+    if (_isProcessing) return; // Prevent multiple simultaneous loads
+
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('project_documents')
-          .where('projectId', isEqualTo: widget.projectId)
-          .where('stage',
-              isEqualTo: ProjectStage.stage1Planning.toString().split('.').last)
-          .orderBy('uploadDate', descending: true)
-          .get();
-
-      List<Map<String, dynamic>> documents = [];
-      Map<String, ApprovalStatus?> approvalStatus = {};
-
-      for (var doc in querySnapshot.docs) {
-        var data = doc.data();
-        data['id'] = doc.id;
-
-        // Check approval status
-        ApprovalStatus? status =
-            await _approvalService.getDocumentApprovalStatus(doc.id);
-        approvalStatus[doc.id] = status;
-
-        // Group by document type
-        DocumentType type = DocumentType.values.firstWhere(
-          (e) => e.toString().split('.').last == data['type'],
-          orElse: () => DocumentType.meetingSummary,
-        );
-
-        documents.add({
-          ...data,
-          'documentType': type,
-        });
-      }
+      // Use the new service method to get documents with approval status
+      final result = await _documentService.getProjectDocumentsWithApproval(
+          widget.projectId, ProjectStage.stage1Planning);
 
       setState(() {
-        _documents = documents;
-        _documentApprovalStatus = approvalStatus;
+        _documents = result['documents'] as List<Map<String, dynamic>>;
+        _documentApprovalStatus =
+            result['approvalStatus'] as Map<String, ApprovalStatus?>;
         _isLoading = false;
       });
     } catch (e) {
       setState(() {
         _isLoading = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading documents: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading documents: $e')),
+        );
+      }
     }
   }
 
@@ -102,88 +83,126 @@ class _ClientDocumentsScreenState extends State<ClientDocumentsScreen>
     return _documents.where((doc) => doc['documentType'] == type).toList();
   }
 
-  // Simplified document download and view function
-  Future<void> _downloadAndOpenDocument(Map<String, dynamic> document) async {
-    try {
-      final documentId = document['id'];
-      if (documentId == null) {
-        throw Exception('Document ID is missing');
-      }
+  // A simplified method that uses DocumentHelper utility
+  Future<void> _downloadDocument(Map<String, dynamic> document) async {
+    // Show loading indicator
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Preparing document...')),
+    );
 
-      // Show loading indicator
+    final result = await DocumentHelper.downloadDocument(
+      documentId: document['id'] as String?,
+      base64Content: document['fileContent'] as String?,
+      fileName: (document['name'] as String?) ?? 'document.pdf',
+      context: context,
+    );
+
+    // Handle the result
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Downloading document...')),
+        SnackBar(content: Text(result['message'])),
       );
-
-      // Construct the firestore URL format for DocumentHelper
-      final firestoreUrl = 'firestore://project_documents/$documentId';
-      final fileName = document['name'] ?? 'document.pdf';
-
-      // Save document to temporary storage and get the file path
-      final filePath =
-          await DocumentHelper.saveDocumentToTemp(firestoreUrl, fileName);
-
-      if (filePath == null) {
-        throw Exception('Failed to save document');
-      }
-
-      // Create a file URI
-      final file = File(filePath);
-      final uri = Uri.file(file.path);
-
-      // Open the file
-      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-        throw Exception('Could not open the document');
-      }
-
-      // Show success message
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Document opened successfully')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
     }
   }
 
   Future<void> _showApprovalDialog(Map<String, dynamic> document) async {
+    final documentId = document['id']?.toString();
+    if (documentId == null || documentId.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error: Document ID is missing')),
+        );
+      }
+      return;
+    }
+
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (context) => DocumentApprovalDialog(
-        documentName: document['name'],
+        documentName: document['name'] ?? 'Unnamed Document',
       ),
     );
 
     if (result != null) {
-      final bool isApproved = result['isApproved'];
-      final String? comments = result['comments'];
+      final bool isApproved = result['isApproved'] == true;
+      final String comments = result['comments']?.toString() ?? '';
 
       try {
+        setState(() {
+          _isProcessing = true;
+        });
+
+        final status =
+            isApproved ? ApprovalStatus.approved : ApprovalStatus.rejected;
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Processing approval...')),
+          );
+        }
+
+        try {
+          setState(() {
+            _documentApprovalStatus[documentId] = status;
+
+            for (int i = 0; i < _documents.length; i++) {
+              if (_documents[i]['id']?.toString() == documentId) {
+                final statusString = status.toString().split('.').last;
+                _documents[i]['approvalStatus'] = statusString;
+                break;
+              }
+            }
+          });
+        } catch (uiError) {
+          print("UI update error: $uiError");
+        }
+
+        // Server call
         await _approvalService.processDocumentApproval(
-          documentId: document['id'],
+          documentId: documentId,
           projectId: widget.projectId,
-          status:
-              isApproved ? ApprovalStatus.approved : ApprovalStatus.rejected,
-          comments: comments,
+          status: status,
+          comments: comments, // Will be correctly handled by updated service
         );
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+        // Sync with latest DB state
+        await Future.delayed(const Duration(milliseconds: 300));
+        if (mounted) {
+          final result = await _documentService.getProjectDocumentsWithApproval(
+            widget.projectId,
+            ProjectStage.stage1Planning,
+          );
+
+          setState(() {
+            _documents = result['documents'] as List<Map<String, dynamic>>;
+            _documentApprovalStatus =
+                result['approvalStatus'] as Map<String, ApprovalStatus?>;
+          });
+        }
+
+        // Show success
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
               content: Text(
-                  'Document ${isApproved ? 'approved' : 'rejected'} successfully')),
-        );
-
-        // Refresh document list
-        _loadDocuments();
+                'Document ${isApproved ? 'approved' : 'rejected'} successfully',
+              ),
+            ),
+          );
+        }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        // Catch any remaining errors
+        print('Error processing approval: $e');
+        await _loadDocuments();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: $e')),
+          );
+        }
+      } finally {
+        setState(() {
+          _isProcessing = false;
+        });
       }
     }
   }
@@ -336,28 +355,72 @@ class _ClientDocumentsScreenState extends State<ClientDocumentsScreen>
 
               // Document Actions
               Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     // Download Button
                     OutlinedButton.icon(
-                      onPressed: () => _downloadAndOpenDocument(document),
-                      icon: const Icon(Icons.download),
-                      label: const Text('Download'),
+                      onPressed: () => _downloadDocument(document),
+                      icon: const Icon(Icons.download, size: 32),
+                      label: const Text('Download',
+                          style: TextStyle(fontSize: 12)),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 8),
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        Uint8List bytes;
+                        try {
+                          bytes = base64Decode(document['fileContent']);
+                        } catch (e) {
+                          print('Error decoding document: $e');
+                          return;
+                        }
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => PdfViewerScreen(
+                              pdfData: bytes,
+                              documentName: document['name'],
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.visibility, size: 32),
+                      label:
+                          const Text('Preview', style: TextStyle(fontSize: 12)),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
 
                     // Approve/Reject Button
                     if (approvalStatus != ApprovalStatus.approved &&
                         approvalStatus != ApprovalStatus.rejected)
                       ElevatedButton.icon(
                         onPressed: () => _showApprovalDialog(document),
-                        label: const Text('Respond'),
+                        icon: const Icon(Icons.check_circle,
+                            size: 32, color: Colors.white),
+                        label: const Text('Approve',
+                            style: TextStyle(fontSize: 12))
                         style: ElevatedButton.styleFrom(
                           backgroundColor:
                               Theme.of(context).colorScheme.primary,
                           foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
                       ),
                   ],
@@ -387,7 +450,6 @@ class _ClientDocumentsScreenState extends State<ClientDocumentsScreen>
         color = Colors.red;
         break;
       case ApprovalStatus.pending:
-      default:
         icon = Icons.pending;
         text = 'Pending';
         color = Colors.orange;

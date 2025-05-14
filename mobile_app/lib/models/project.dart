@@ -1,26 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-
-enum ProjectStage {
-  stage1Planning,
-  stage2Design,
-  stage3Execution,
-  stage4Completion
-}
-
-extension ProjectStageExtension on ProjectStage {
-  String get displayName {
-    switch (this) {
-      case ProjectStage.stage1Planning:
-        return 'Planning & Design';
-      case ProjectStage.stage2Design:
-        return 'Design Development';
-      case ProjectStage.stage3Execution:
-        return 'Execution';
-      case ProjectStage.stage4Completion:
-        return 'Completion';
-    }
-  }
-}
+import 'project_document.dart';
 
 class Project {
   final String id;

@@ -4,17 +4,18 @@ import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../constants/app_constants.dart';
 import '../../models/project_document.dart';
-import '../../models/project.dart';
 import '../../services/document_service.dart';
 
 class DocumentUploadScreen extends StatefulWidget {
   final ProjectStage stage;
   final String? projectId;
+  final DocumentType documentType;
 
   const DocumentUploadScreen({
     super.key,
     required this.stage,
     this.projectId,
+    required this.documentType,
   });
 
   @override
@@ -29,7 +30,6 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
   final _fileNameController = TextEditingController();
   final ImagePicker _imagePicker = ImagePicker();
 
-  DocumentType _selectedDocumentType = DocumentType.meetingSummary;
   File? _selectedFile;
   bool _isUploading = false;
   bool _isPdf = false;
@@ -62,7 +62,6 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
         setState(() {
           _selectedFile = File(pickedFile.path);
           _isPdf = false;
-          // Extract file name from path and set it as default
           String fileName = pickedFile.name;
           _fileNameController.text = fileName;
         });
@@ -90,9 +89,6 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
           _selectedFile = file;
           _isPdf = true;
           _fileNameController.text = fileName;
-
-          // Set document type based on what the PDF likely contains
-          _selectedDocumentType = DocumentType.other;
         });
       }
     } catch (e) {
@@ -116,7 +112,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
         await _documentService.uploadDocument(
           file: _selectedFile!,
           fileName: fileName,
-          type: _selectedDocumentType,
+          type: widget.documentType,
           stage: widget.stage,
           projectId: _projectIdController.text,
           description: _descriptionController.text,
@@ -126,7 +122,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Document uploaded successfully')),
           );
-          Navigator.pop(context, true); // Return true to indicate success
+          Navigator.pop(context, true);
         }
       } catch (e) {
         if (mounted) {
@@ -187,10 +183,11 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
   @override
   Widget build(BuildContext context) {
     String stageTitle = widget.stage.displayName;
+    String documentTypeTitle = widget.documentType.displayName;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Upload Document - $stageTitle'),
+        title: Text('Upload $documentTypeTitle - $stageTitle'),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
       ),
@@ -212,47 +209,34 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Project ID
-                    TextFormField(
-                      controller: _projectIdController,
-                      decoration: const InputDecoration(
-                        labelText: 'Project ID',
-                        border: OutlineInputBorder(),
+                    Container(
+                      padding:
+                          const EdgeInsets.all(AppConstants.defaultPadding),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(
+                            AppConstants.defaultBorderRadius),
+                        color: Colors.grey.shade100,
                       ),
-                      readOnly: widget.projectId != null,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter a project ID';
-                        }
-                        return null;
-                      },
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Document Type',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            widget.documentType.displayName,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: AppConstants.defaultPadding),
-
-                    // Document Type
-                    DropdownButtonFormField<DocumentType>(
-                      value: _selectedDocumentType,
-                      decoration: const InputDecoration(
-                        labelText: 'Document Type',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: DocumentType.values.map((type) {
-                        return DropdownMenuItem<DocumentType>(
-                          value: type,
-                          child: Text(type.displayName),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        if (value != null) {
-                          setState(() {
-                            _selectedDocumentType = value;
-                          });
-                        }
-                      },
-                    ),
-                    const SizedBox(height: AppConstants.defaultPadding),
-
-                    // File Name
                     TextFormField(
                       controller: _fileNameController,
                       decoration: const InputDecoration(
@@ -267,8 +251,6 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
                       },
                     ),
                     const SizedBox(height: AppConstants.defaultPadding),
-
-                    // Description
                     TextFormField(
                       controller: _descriptionController,
                       maxLines: 3,
@@ -278,8 +260,6 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
                       ),
                     ),
                     const SizedBox(height: AppConstants.defaultPadding),
-
-                    // Document Selection
                     Container(
                       width: double.infinity,
                       padding:
@@ -353,8 +333,6 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
                       ),
                     ),
                     const SizedBox(height: AppConstants.largePadding),
-
-                    // Upload Button
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
