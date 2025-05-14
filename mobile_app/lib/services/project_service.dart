@@ -81,28 +81,9 @@ class ProjectService {
             .toList();
       } catch (e) {
         // If index error occurs, fallback to simplified query without sorting
-        if (e.toString().contains('failed-precondition') ||
-            e.toString().contains('requires an index')) {
-          print('Index error detected, using fallback query without sorting');
+        print('Error: $e');
 
-          final querySnapshot = await _firestore
-              .collection('projects')
-              .where('adminId', isEqualTo: user.uid)
-              .get();
-
-          // Manually sort results by createdAt if possible
-          final projects = querySnapshot.docs
-              .map((doc) => Project.fromFirestore(doc))
-              .toList();
-
-          // Try to sort locally (might not work correctly for server timestamps)
-          projects.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-          return projects;
-        } else {
-          // Rethrow if it's not an index-related error
-          throw e;
-        }
+        return [];
       }
     } catch (e) {
       print('Error fetching admin projects: $e');
@@ -130,29 +111,9 @@ class ProjectService {
             .map((doc) => Project.fromFirestore(doc))
             .toList();
       } catch (e) {
-        // If index error occurs, fallback to simplified query without sorting
-        if (e.toString().contains('failed-precondition') ||
-            e.toString().contains('requires an index')) {
-          print('Index error detected, using fallback query without sorting');
+        print('Error: $e');
 
-          final querySnapshot = await _firestore
-              .collection('projects')
-              .where('clientId', isEqualTo: user.uid)
-              .get();
-
-          // Manually sort results by createdAt if possible
-          final projects = querySnapshot.docs
-              .map((doc) => Project.fromFirestore(doc))
-              .toList();
-
-          // Try to sort locally (might not work correctly for server timestamps)
-          projects.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-          return projects;
-        } else {
-          // Rethrow if it's not an index-related error
-          throw e;
-        }
+        return [];
       }
     } catch (e) {
       print('Error fetching client projects: $e');
@@ -253,8 +214,6 @@ class ProjectService {
       await _firestore.collection('projects').doc(projectId).delete();
       print('Project deleted successfully: $projectId');
 
-      // Note: You might want to also delete related documents
-      // This would require fetching all documents with this projectId and deleting them
     } catch (e) {
       print('Error deleting project: $e');
       throw Exception('Failed to delete project: $e');
