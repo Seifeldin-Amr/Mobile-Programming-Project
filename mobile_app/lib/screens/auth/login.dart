@@ -97,22 +97,15 @@ class _LoginScreenState extends State<LoginScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Checkbox(
-                        value: _rememberMe,
-                        onChanged: (value) {
-                          setState(() {
-                            _rememberMe = value!;
-                          });
-                        },
-                      ),
-                      const Text('Remember me'),
-                    ],
-                  ),
                   TextButton(
-                    onPressed: () {
-                      // TODO: Implement forgot password
+                    onPressed: () async {
+                      await AuthService()
+                          .sendPasswordResetEmail(_emailController.text.trim());
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                            content: Text(
+                                'Password reset email sent! Check your inbox.')),
+                      );
                     },
                     child: const Text('Forgot Password?'),
                   ),

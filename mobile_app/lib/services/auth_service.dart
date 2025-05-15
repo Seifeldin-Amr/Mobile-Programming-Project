@@ -53,4 +53,13 @@ class AuthService {
   User? getCurrentUser() {
     return _auth.currentUser;
   }
+
+  // Forgot password function
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email.trim());
+    } catch (e) {
+      rethrow;
+    }
+  }
 }

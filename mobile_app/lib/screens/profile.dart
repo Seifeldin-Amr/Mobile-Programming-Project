@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../constants/app_constants.dart';
 import '../widgets/custom_app_bar.dart';
 import '../services/auth_service.dart';
 import '../services/admin_service.dart';
 import 'auth/login.dart';
+import 'dart:typed_data';
+import '../services/user_service.dart';
+import '../models/user.dart';
+import 'personal_details.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -15,9 +18,12 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final _adminService = AdminService();
+  final AdminService _adminService = AdminService();
+  final UserService _userService = UserService();
+  final User? _user = FirebaseAuth.instance.currentUser;
+
   bool _isAdmin = false;
-  bool _isLoading = true;
+  bool _isLoadingAdmin = true;
 
   @override
   void initState() {
@@ -28,19 +34,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _checkAdminStatus() async {
     try {
       final isAdmin = await _adminService.isCurrentUserAdmin();
-      print('Admin status check in Profile Screen: $isAdmin'); // Debug print
       if (mounted) {
         setState(() {
           _isAdmin = isAdmin;
-          _isLoading = false;
+          _isLoadingAdmin = false;
         });
       }
     } catch (e) {
-      print('Error checking admin status: $e'); // Debug print
       if (mounted) {
         setState(() {
           _isAdmin = false;
-          _isLoading = false;
+          _isLoadingAdmin = false;
         });
       }
     }
@@ -48,67 +52,71 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final User? user = FirebaseAuth.instance.currentUser;
+    if (_user == null) {
+      // Handle case where user is null (not logged in)
+      return Scaffold(
+        body: Center(child: Text('No user logged in')),
+      );
+    }
 
-    return FutureBuilder<DocumentSnapshot>(
-      future:
-          FirebaseFirestore.instance.collection('users').doc(user?.uid).get(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    return Scaffold(
+      appBar: const CustomAppBar(),
+      body: Padding(
+        padding: const EdgeInsets.all(AppConstants.defaultPadding),
+        child: FutureBuilder<UserData?>(
+          future: _userService.getUserData(_user!.uid),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting ||
+                _isLoadingAdmin) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-        if (!snapshot.hasData || snapshot.data == null) {
-          return const Center(child: Text('User data not found'));
-        }
+            if (snapshot.hasError) {
+              return Center(
+                  child: Text('Error loading user data: ${snapshot.error}'));
+            }
 
-        final userData = snapshot.data!.data() as Map<String, dynamic>;
-        final String firstName = userData['firstName'] ?? 'First Name';
-        final String lastName = userData['lastName'] ?? 'Last Name';
-        final String email = userData['email'] ?? 'Email';
-        final bool isAdminInFirestore = userData['isAdmin'] == true;
+            if (!snapshot.hasData || snapshot.data == null) {
+              return const Center(child: Text('User data not found'));
+            }
 
-        if (isAdminInFirestore != _isAdmin) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            setState(() {
-              _isAdmin = isAdminInFirestore;
-            });
-          });
-        }
+            final userData = snapshot.data!;
 
-        return Scaffold(
-          appBar: const CustomAppBar(),
-          body: Padding(
-            padding: const EdgeInsets.all(AppConstants.defaultPadding),
-            child: Column(
+            Uint8List? imageBytes = userData.profileImageBytes;
+            String firstName = userData.firstName ?? 'First Name';
+            String lastName = userData.lastName ?? 'Last Name';
+            String email = userData.email ?? 'Email';
+            String phoneNumber = userData.phoneNumber ?? 'Phone Number';
+
+            return Column(
               children: [
-                const CircleAvatar(
-                    radius: 50, child: Icon(Icons.person, size: 50)),
+                CircleAvatar(
+                  radius: 50,
+                  backgroundImage:
+                      imageBytes != null ? MemoryImage(imageBytes) : null,
+                  child: imageBytes == null
+                      ? const Icon(Icons.person, size: 50)
+                      : null,
+                ),
                 const SizedBox(height: AppConstants.defaultPadding),
-                Text('$firstName $lastName',
-                    style: Theme.of(context).textTheme.headlineSmall),
+                Text(
+                  '$firstName $lastName',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
                 const SizedBox(height: AppConstants.smallPadding),
                 Text(
                   email,
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
-                _isAdmin
-                    ? Container(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const SizedBox(height: AppConstants.smallPadding),
-                            Text(
-                              'Admin',
-                              style: TextStyle(
-                                color: Colors.green,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : const SizedBox.shrink(),
+                const SizedBox(height: AppConstants.smallPadding),
+                if (_isAdmin)
+                  Text(
+                    'Admin',
+                    style: TextStyle(
+                      color: Colors.green,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 const SizedBox(height: AppConstants.largePadding),
                 Expanded(
                   child: Column(
@@ -117,21 +125,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         context,
                         Icons.person_outline,
                         'Personal Details',
-                        () {},
-                      ),
-                      const SizedBox(height: AppConstants.defaultPadding),
-                      _buildOptionCard(
-                        context,
-                        Icons.shopping_bag_outlined,
-                        'Past Orders',
-                        () {},
-                      ),
-                      const SizedBox(height: AppConstants.defaultPadding),
-                      _buildOptionCard(
-                        context,
-                        Icons.settings_outlined,
-                        'Settings',
-                        () {},
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => PersonalDetailsScreen(
+                                uid: _user.uid,
+                                firstName: firstName,
+                                lastName: lastName,
+                                email: email,
+                                phoneNumber: phoneNumber,
+                              ),
+                            ),
+                          );
+                        },
                       ),
                       const SizedBox(height: AppConstants.defaultPadding),
                       _buildLogoutButton(context),
@@ -139,10 +146,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               ],
-            ),
-          ),
-        );
-      },
+            );
+          },
+        ),
+      ),
     );
   }
 
