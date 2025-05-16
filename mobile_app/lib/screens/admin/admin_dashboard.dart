@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:mobile_app/services/admin_service.dart';
+import 'package:mobile_app/screens/admin/adminRenovationcost.dart';
 import '../../constants/app_constants.dart';
 import 'admin_project_management.dart';
 
@@ -37,6 +39,19 @@ class AdminDashboard extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                   builder: (context) => const AdminProjectManagementScreen(),
+                ),
+              ),
+            ),
+            _buildAdminCard(
+              context,
+                title: 'Renovation Cost Estimation Adjustment',
+                description: 'Adjust the Prices of the material for the estimation cost',
+                icon: Icons.calculate,
+                color: Colors.purple,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AdminRenovationCostAdjust(),
                 ),
               ),
             ),
