@@ -4,6 +4,39 @@ class RenovationService {
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  // Method to get renovation prices based on finishing level
+  Future<Map<String, dynamic>> getRenovationPrices(String finishingLevel) async {
+    try {
+      String documentId;
+      switch (finishingLevel) {
+        case 'Luxury':
+          documentId = 'GDF3M52QJrwWJcCpGfNt';
+          break;
+        case 'Standard':
+          documentId = 'WX6O6LKmOlgLErZZuur6';
+          break;
+        case 'Economy':
+          documentId = 'LQdtihnpYnjDP1VnoMdo';
+          break;
+        default:
+          throw Exception('Invalid finishing level');
+      }
+
+      DocumentSnapshot doc = await _firestore
+          .collection('renovation_prices')
+          .doc(documentId)
+          .get();
+
+      if (!doc.exists) {
+        throw Exception('Prices not found for $finishingLevel level');
+      }
+
+      return doc.data() as Map<String, dynamic>;
+    } catch (e) {
+      throw Exception('Failed to fetch renovation prices: $e');
+    }
+  }
+
   // Method to adjust renovation costs
   Future<void> adjustRenovationCosts({
     required String finishingLevel,
