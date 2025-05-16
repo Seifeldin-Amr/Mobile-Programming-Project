@@ -96,7 +96,7 @@ class _AdminRenovationCostAdjustState
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: EdgeInsets.all(AppConstants.defaultPadding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -181,6 +181,9 @@ class _AdminRenovationCostAdjustState
                       ),
               ),
             ),
+            
+            // Add some bottom padding to ensure content doesn't get cut off
+            const SizedBox(height: AppConstants.defaultPadding),
           ],
         ),
       ),
