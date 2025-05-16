@@ -35,9 +35,11 @@ class _RenovationEstimateScreenState extends State<RenovationEstimateScreen> {
   ];
 
   Future<void> _calculateCost() async {
-    if (selectedFinishingLevel == null || areaController.text.isEmpty) {
+    if (selectedFinishingLevel == null || 
+        selectedType == null || 
+        areaController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select finishing level and enter area')),
+        const SnackBar(content: Text('Please select finishing level, property type and enter area')),
       );
       return;
     }
@@ -57,6 +59,7 @@ class _RenovationEstimateScreenState extends State<RenovationEstimateScreen> {
       _calculationResults = RenovationCalculator.calculateTotalCost(
         area: area,
         prices: _prices!,
+        propertyType: selectedType!,
       );
       
     } catch (e) {
@@ -173,9 +176,10 @@ class _RenovationEstimateScreenState extends State<RenovationEstimateScreen> {
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       const SizedBox(height: AppConstants.defaultPadding),
-                      Text('Paint Cost per m²: \$${_calculationResults!['perSquareMeter']['paint']}'),
-                      Text('Flooring Cost per m²: \$${_calculationResults!['perSquareMeter']['flooring']}'),
-                      Text('Furniture Cost per m²: \$${_calculationResults!['perSquareMeter']['furniture']}'),
+                      const SizedBox(height: AppConstants.defaultPadding),
+                      Text('Paint Cost per m²: \$${_calculationResults!['perSquareMeter']['paint'].toStringAsFixed(2)}'),
+                      Text('Flooring Cost per m²: \$${_calculationResults!['perSquareMeter']['flooring'].toStringAsFixed(2)}'),
+                      Text('Furniture Cost per m²: \$${_calculationResults!['perSquareMeter']['furniture'].toStringAsFixed(2)}'),
                       const Divider(),
                       Text('Paint Total: \$${_calculationResults!['paintCost'].toStringAsFixed(2)}'),
                       Text('Flooring Total: \$${_calculationResults!['flooringCost'].toStringAsFixed(2)}'),
