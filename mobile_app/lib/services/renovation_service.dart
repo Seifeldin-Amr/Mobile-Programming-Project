@@ -46,6 +46,20 @@ class RenovationService {
   }) async {
     try {
       Map<String, dynamic> updateData = {};
+      String documentId;
+      switch (finishingLevel) {
+        case 'Luxury':
+          documentId = 'GDF3M52QJrwWJcCpGfNt';
+          break;
+        case 'Standard':
+          documentId = 'WX6O6LKmOlgLErZZuur6';
+          break;
+        case 'Economy':
+          documentId = 'LQdtihnpYnjDP1VnoMdo';
+          break;
+        default:
+          throw Exception('Invalid finishing level');
+      }
 
       if (finishingLevel == 'Luxury') {
         updateData['painting'] = paintCost;
@@ -54,7 +68,7 @@ class RenovationService {
          
         await _firestore
           .collection('renovation_prices')
-          .doc('GDF3M52QJrwWJcCpGfNt')
+          .doc(documentId)
           .update(updateData);
         
         print('Luxury Prices is updated');
@@ -66,7 +80,7 @@ class RenovationService {
          
         await _firestore
           .collection('renovation_prices')
-          .doc('WX6O6LKmOlgLErZZuur6')
+          .doc(documentId)
           .update(updateData);
 
         print('Standard Prices is updated');
@@ -77,7 +91,7 @@ class RenovationService {
          
         await _firestore
           .collection('renovation_prices')
-          .doc('LQdtihnpYnjDP1VnoMdo')
+          .doc(documentId)
           .update(updateData);
 
         print('Economy Prices is updated');
