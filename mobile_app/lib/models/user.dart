@@ -7,6 +7,7 @@ class UserData {
   final String phoneNumber;
   final bool isAdmin;
   final Uint8List? profileImageBytes;
+  final String? imageBase64;
 
   UserData({
     required this.firstName,
@@ -15,5 +16,6 @@ class UserData {
     required this.phoneNumber,
     required this.isAdmin,
     this.profileImageBytes,
+    this.imageBase64,
   });
 }
