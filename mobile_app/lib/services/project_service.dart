@@ -36,15 +36,19 @@ class ProjectService {
             'status': 'pending',
             'startedAt': FieldValue.serverTimestamp(),
             'documents': [],
+            'pay_status':'paid',
           },
           'stage2Design': {
             'status': 'notStarted',
+            'pay_status':'not paid',
           },
           'stage3Execution': {
             'status': 'notStarted',
+            'pay_status':'not paid',
           },
           'stage4Completion': {
             'status': 'notStarted',
+            'pay_status':'not paid',
           },
         },
       };

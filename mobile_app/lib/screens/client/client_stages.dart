@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_app/screens/client/client_documents_screen.dart';
+import 'package:mobile_app/screens/checkout.dart';
 
 class ClientStagesScreen extends StatefulWidget {
   final String projectId;
@@ -48,25 +49,29 @@ class _ClientStagesScreenState extends State<ClientStagesScreen>
         'name': 'Planning & Design',
         'status': 'In Progress',
         'progress': 1 / 3,
-        'isActive': true
+        'isActive': true,
+        'paymentStatus': 'paid'  // First stage is already paid
       },
       {
         'name': 'Design Development',
         'status': 'Not Started yet',
         'progress': 0.0,
-        'isActive': false
+        'isActive': false,
+        'paymentStatus': 'pending'
       },
       {
         'name': 'Execution',
         'status': 'Not Started yet',
         'progress': 0.0,
-        'isActive': false
+        'isActive': false,
+        'paymentStatus': 'pending'
       },
       {
         'name': 'Completion',
         'status': 'Not Started yet',
         'progress': 0.0,
-        'isActive': false
+        'isActive': false,
+        'paymentStatus': 'pending'
       },
     ];
 
@@ -121,41 +126,73 @@ class _ClientStagesScreenState extends State<ClientStagesScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        stage['name'] as String,
-                        style: TextStyle(
+                        stage['name'] ?? 'Unknown Stage',
+                        style: const TextStyle(
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: isActive ? Colors.black : Colors.grey[600],
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Status: ${stage['status']}',
+                        stage['status'] ?? 'Unknown Status',
                         style: TextStyle(
-                          fontSize: 12,
-                          color: isActive ? Colors.black87 : Colors.grey[600],
-                        ),
-                      ),
-                      Text(
-                        '${(progress * 100).toInt()}% completed',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isActive ? Colors.black87 : Colors.grey[600],
+                          fontSize: 14,
+                          color: Colors.grey[600],
                         ),
                       ),
                     ],
                   ),
                 ),
-                SizedBox(
-                  height: 40,
-                  width: 40,
-                  child: CircularProgressIndicator(
-                    value: progress,
-                    backgroundColor: Colors.grey[300],
-                    color: isActive
-                        ? Theme.of(context).colorScheme.primary
-                        : Colors.grey,
-                    strokeWidth: 7,
-                  ),
+                Row(
+                  children: [
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        SizedBox(
+                          width: 40,
+                          height: 40,
+                          child: CircularProgressIndicator(
+                            value: stage['progress'] as double,
+                            backgroundColor: Colors.grey[200],
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              _getProgressColor(stage['progress'] as double),
+                            ),
+                          ),
+                        ),
+                        Text(
+                          '${((stage['progress'] as double) * 100).toInt()}%',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: 8),
+                    if (stage['paymentStatus'] != 'paid' && stage['name'] != 'Planning & Design')
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => CheckoutScreen(
+                                projectId:widget.projectId,
+                                projectName:widget.projectName,
+                                stageName: stage['name'],
+                              ),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Theme.of(context).colorScheme.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          minimumSize: const Size(60, 30),
+                          textStyle: const TextStyle(fontSize: 12),
+                        ),
+                        child: const Text('Pay'),
+                      ),
+                  ],
                 ),
               ],
             ),
@@ -163,5 +200,15 @@ class _ClientStagesScreenState extends State<ClientStagesScreen>
         ),
       ),
     );
+  }
+
+  Color _getProgressColor(double progress) {
+    if (progress < 0.33) {
+      return Colors.red;
+    } else if (progress < 0.66) {
+      return Colors.yellow;
+    } else {
+      return Colors.green;
+    }
   }
 }
