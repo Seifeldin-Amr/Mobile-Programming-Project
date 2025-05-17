@@ -38,7 +38,9 @@ class UserService {
         email: email,
         phoneNumber: phoneNumber,
         isAdmin: isAdmin,
+        imageBase64: base64Image,
         profileImageBytes: imageBytes,
+
       );
     } catch (e) {
       rethrow;
