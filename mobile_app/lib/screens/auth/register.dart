@@ -221,7 +221,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         'email': _emailController.text.trim(),
                         'number': _numbercontroller.text.trim(),
                         'profileImage':
-                            encodedImage, // <-- now it's Base64 string
+                            encodedImage,
                         'isAdmin': false,
                       };
 

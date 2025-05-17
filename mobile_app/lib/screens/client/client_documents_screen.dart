@@ -15,11 +15,13 @@ import 'document_approval_dialog.dart';
 class ClientDocumentsScreen extends StatefulWidget {
   final String projectId;
   final String projectName;
+  final ProjectStage stage;
 
   const ClientDocumentsScreen({
     super.key,
     required this.projectId,
     required this.projectName,
+    required this.stage,
   });
 
   @override
@@ -39,7 +41,9 @@ class _ClientDocumentsScreenState extends State<ClientDocumentsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    // Both stages have 3 tabs
+    int tabCount = 3;
+    _tabController = TabController(length: tabCount, vsync: this);
     _loadDocuments();
   }
 
@@ -57,9 +61,9 @@ class _ClientDocumentsScreenState extends State<ClientDocumentsScreen>
     });
 
     try {
-      // Use the new service method to get documents with approval status
+      // Use the new service method to get documents with approval status for current stage
       final result = await _documentService.getProjectDocumentsWithApproval(
-          widget.projectId, ProjectStage.stage1Planning);
+          widget.projectId, widget.stage);
 
       setState(() {
         _documents = result['documents'] as List<Map<String, dynamic>>;
@@ -170,7 +174,8 @@ class _ClientDocumentsScreenState extends State<ClientDocumentsScreen>
         if (mounted) {
           final result = await _documentService.getProjectDocumentsWithApproval(
             widget.projectId,
-            ProjectStage.stage1Planning,
+            widget
+                .stage, // Use the current stage instead of hardcoding stage1Planning
           );
 
           setState(() {
@@ -219,37 +224,64 @@ class _ClientDocumentsScreenState extends State<ClientDocumentsScreen>
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
           indicatorColor: Colors.white,
-          tabs: const [
-            Tab(text: 'Concept Designs'),
-            Tab(text: 'Design Briefs'),
-            Tab(text: 'Meeting Summaries'),
-          ],
+          tabs: widget.stage == ProjectStage.stage1Planning
+              ? const [
+                  Tab(text: 'Concept Designs'),
+                  Tab(text: 'Design Briefs'),
+                  Tab(text: 'Meeting Summaries'),
+                ]
+              : const [
+                  Tab(text: 'Concept Designs'),
+                  Tab(text: 'MEP Drawings'),
+                  Tab(text: 'Construction Documents'),
+                ],
         ),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : TabBarView(
               controller: _tabController,
-              children: [
-                _buildDocumentList(
-                  _getDocumentsByType(DocumentType.conceptDesign),
-                  'Concept Designs',
-                  Icons.architecture,
-                  Colors.blue,
-                ),
-                _buildDocumentList(
-                  _getDocumentsByType(DocumentType.designBrief),
-                  'Design Briefs',
-                  Icons.design_services,
-                  Colors.purple,
-                ),
-                _buildDocumentList(
-                  _getDocumentsByType(DocumentType.meetingSummary),
-                  'Meeting Summaries',
-                  Icons.meeting_room,
-                  Colors.green,
-                ),
-              ],
+              children: widget.stage == ProjectStage.stage1Planning
+                  ? [
+                      _buildDocumentList(
+                        _getDocumentsByType(DocumentType.conceptDesign),
+                        'Concept Designs',
+                        Icons.architecture,
+                        Colors.blue,
+                      ),
+                      _buildDocumentList(
+                        _getDocumentsByType(DocumentType.designBrief),
+                        'Design Briefs',
+                        Icons.design_services,
+                        Colors.purple,
+                      ),
+                      _buildDocumentList(
+                        _getDocumentsByType(DocumentType.meetingSummary),
+                        'Meeting Summaries',
+                        Icons.meeting_room,
+                        Colors.green,
+                      ),
+                    ]
+                  : [
+                      _buildDocumentList(
+                        _getDocumentsByType(DocumentType.conceptDesign),
+                        'Concept Designs',
+                        Icons.architecture,
+                        Colors.blue,
+                      ),
+                      _buildDocumentList(
+                        _getDocumentsByType(DocumentType.mepDrawings),
+                        'MEP Drawings',
+                        Icons.engineering,
+                        Colors.purple,
+                      ),
+                      _buildDocumentList(
+                        _getDocumentsByType(DocumentType.constructionDocuments),
+                        'Construction Documents',
+                        Icons.apartment,
+                        Colors.brown,
+                      ),
+                    ],
             ),
     );
   }

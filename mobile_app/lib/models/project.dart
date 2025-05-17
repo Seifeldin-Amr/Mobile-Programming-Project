@@ -49,7 +49,6 @@ class Project {
     );
   }
 
-  // Convert to Map for Firestore
   Map<String, dynamic> toMap() {
     return {
       'name': name,
@@ -64,7 +63,6 @@ class Project {
     };
   }
 
-  // Helper method to get stage status
   String getStageStatus(ProjectStage stage) {
     final stageKey = stage.toString().split('.').last;
     if (stages.containsKey(stageKey) && stages[stageKey] is Map) {
@@ -73,12 +71,9 @@ class Project {
     return 'notStarted';
   }
 
-  // Helper to check if a stage is active/unlocked
   bool isStageUnlocked(ProjectStage stage) {
-    // First stage is always unlocked
     if (stage == ProjectStage.stage1Planning) return true;
 
-    // For other stages, check if previous stage is completed
     if (stage == ProjectStage.stage2Design) {
       return getStageStatus(ProjectStage.stage1Planning) == 'completed';
     } else if (stage == ProjectStage.stage3Execution) {
@@ -90,7 +85,6 @@ class Project {
     return false;
   }
 
-  // Get document count for a stage
   int getStageDocumentCount(ProjectStage stage) {
     final stageKey = stage.toString().split('.').last;
     if (stages.containsKey(stageKey) && stages[stageKey] is Map) {

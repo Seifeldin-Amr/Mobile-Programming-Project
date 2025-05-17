@@ -45,18 +45,23 @@ class _StageDocumentsScreenState extends State<StageDocumentsScreen> {
           DocumentType.designBrief,
         ];
       }
+      // For Stage 2 (Design), include MEP drawings and construction documents
+      else if (widget.stage == ProjectStage.stage2Design) {
+        _requiredDocumentTypes = [
+          DocumentType.conceptDesign,
+          DocumentType.mepDrawings,
+          DocumentType.constructionDocuments,
+        ];
+      }
 
       // Load documents for this stage and project
       final documents = await _documentService.getDocumentsByProjectAndStage(
           widget.projectId, widget.stage);
 
-      // Group documents by type
       _documentsByType = {};
       for (var docType in _requiredDocumentTypes) {
-        // Convert the ProjectDocument objects to maps to make them easier to work with
         _documentsByType[docType] =
             documents.where((doc) => doc.type == docType).map((doc) {
-          // Convert to Map and include the id
           final Map<String, dynamic> docMap = doc.toMap();
           docMap['id'] = doc.id;
           return docMap;
@@ -86,23 +91,6 @@ class _StageDocumentsScreenState extends State<StageDocumentsScreen> {
       return status == 'approved' || status == 'pending';
     });
 
-    // Ensure we capture both rejection and approval comments for display
-    for (var doc in documents) {
-      String? status = doc['approvalStatus']?.toString().toLowerCase();
-
-      // For rejected documents, make sure we capture the rejection comments
-      if (status == 'rejected' && doc.containsKey('rejectionComments')) {
-        // Ensure the comment is available for preview
-        doc['rejectionReason'] = doc['rejectionComments'];
-      }
-
-      // For approved documents, make sure we capture the approval comments
-      if (status == 'approved' && doc.containsKey('approvalComments')) {
-        // Make approval comments available in the UI
-        doc['approvalFeedback'] = doc['approvalComments'];
-      }
-    }
-
     if (hasApprovedOrPending) {
       Navigator.push(
         context,
@@ -118,7 +106,6 @@ class _StageDocumentsScreenState extends State<StageDocumentsScreen> {
         ),
       ).then((_) => _loadRequiredDocuments());
     } else {
-      // Navigate normally with upload allowed
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -128,7 +115,7 @@ class _StageDocumentsScreenState extends State<StageDocumentsScreen> {
             stage: widget.stage,
             documentType: documentType,
             documents: documents,
-            allowUpload: true, // Allow uploads when no approved/pending docs
+            allowUpload: true,
           ),
         ),
       ).then((_) => _loadRequiredDocuments());
@@ -229,6 +216,14 @@ class _StageDocumentsScreenState extends State<StageDocumentsScreen> {
       case DocumentType.designBrief:
         iconData = Icons.description;
         color = Colors.orange;
+        break;
+      case DocumentType.mepDrawings:
+        iconData = Icons.engineering;
+        color = Colors.purple;
+        break;
+      case DocumentType.constructionDocuments:
+        iconData = Icons.apartment;
+        color = Colors.brown;
         break;
       default:
         iconData = Icons.file_present;

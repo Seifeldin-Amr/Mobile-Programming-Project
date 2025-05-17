@@ -36,7 +36,6 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     try {
       await _projectService.checkAndAdvanceProjectStages(widget.projectId);
 
-      // Reload project after updating
       setState(() {
         _projectFuture = _projectService.getProject(widget.projectId);
         _isLoading = false;
@@ -116,18 +115,13 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Project info card
           _buildProjectInfoCard(project),
           const SizedBox(height: 16),
-
-          // Stages section
           const Text(
             'Project Stages',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-
-          // Stage 1: Planning
           _buildStageCard(
             context,
             'Stage 1: Planning',
@@ -135,14 +129,26 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
             project,
             ProjectStage.stage1Planning,
           ),
-
-          // Stage 2: Design (only if stage 1 is completed)
           _buildStageCard(
             context,
             'Stage 2: Design',
             project.getStageStatus(ProjectStage.stage2Design),
             project,
             ProjectStage.stage2Design,
+          ),
+          _buildStageCard(
+            context,
+            'Stage 3: Execution',
+            project.getStageStatus(ProjectStage.stage3Execution),
+            project,
+            ProjectStage.stage3Execution,
+          ),
+          _buildStageCard(
+            context,
+            'Stage 4: Completion',
+            project.getStageStatus(ProjectStage.stage4Completion),
+            project,
+            ProjectStage.stage4Completion,
           ),
         ],
       ),
@@ -171,7 +177,6 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                 IconButton(
                   icon: const Icon(Icons.edit),
                   onPressed: () async {
-                    // Show edit dialog
                     await _showEditProjectDialog(context, project);
                   },
                 ),

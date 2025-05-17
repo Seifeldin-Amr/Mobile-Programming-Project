@@ -5,8 +5,6 @@ import '../../services/document_service.dart';
 import 'document_upload.dart';
 import '../../widgets/pdf_viewer_screen.dart';
 import 'dart:convert';
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
 import 'dart:typed_data';
 
 class DocumentListScreen extends StatefulWidget {
@@ -39,20 +37,14 @@ class _DocumentListScreenState extends State<DocumentListScreen> {
   @override
   void initState() {
     super.initState();
-    // Initialize with the documents passed in
     _documents = List.from(widget.documents);
-
-    // Fetch document comments if needed
     _fetchDocumentComments();
   }
 
-  // Method to fetch document comments separately
   Future<void> _fetchDocumentComments() async {
-    // Skip if no documents or already loading
     if (_documents.isEmpty || _isLoading) return;
 
     try {
-      // Fetch comments for each document
       for (int i = 0; i < _documents.length; i++) {
         final docId = _documents[i]['id'];
         if (docId != null) {
@@ -88,7 +80,6 @@ class _DocumentListScreenState extends State<DocumentListScreen> {
         widget.stage,
       );
 
-      // Filter and convert to maps
       final filteredDocs =
           documents.where((doc) => doc.type == widget.documentType).map((doc) {
         final Map<String, dynamic> docMap = doc.toMap();
@@ -101,7 +92,6 @@ class _DocumentListScreenState extends State<DocumentListScreen> {
         _isLoading = false;
       });
 
-      // After refreshing the document list, fetch the complete data with comments
       _fetchDocumentComments();
     } catch (e) {
       setState(() {
@@ -128,14 +118,12 @@ class _DocumentListScreenState extends State<DocumentListScreen> {
     );
 
     if (result == true) {
-      // If document was uploaded successfully, refresh the list
       _refreshDocuments();
     }
   }
 
   Future<void> _deleteDocument(Map<String, dynamic> document) async {
     try {
-      // Convert map to ProjectDocument object
       final projectDoc = ProjectDocument.fromMap(document);
 
       await _documentService.deleteDocument(projectDoc);
@@ -245,17 +233,12 @@ class _DocumentListScreenState extends State<DocumentListScreen> {
   Widget _buildDocumentCard(Map<String, dynamic> document) {
     final uploadDate = (document['uploadDate'] as DateTime?) ?? DateTime.now();
     final formattedDate = DateFormat('MMM dd, yyyy').format(uploadDate);
-
-    // Debug print to check document content
     print("Building card for document: ${document['id']}");
     print("Document has fileContent: ${document.containsKey('fileContent')}");
     print(
         "Document fileContent length: ${document['fileContent']?.length ?? 'null'}");
 
-    // Get approval status if available
     String? approvalStatus = document['approvalStatus'];
-
-    // Check for any comments to display (rejection or approval)
     final String? rejectionComments = document['rejectionComments'];
     final String? approvalComments = document['approvalComments'];
 
@@ -498,6 +481,10 @@ class _DocumentListScreenState extends State<DocumentListScreen> {
         return Icons.architecture;
       case DocumentType.designBrief:
         return Icons.description;
+      case DocumentType.mepDrawings:
+        return Icons.engineering;
+      case DocumentType.constructionDocuments:
+        return Icons.apartment;
       default:
         return Icons.file_present;
     }

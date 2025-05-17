@@ -7,7 +7,7 @@ class ProjectService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // Create a new project (Stage 1)
+  // Create a new project
   Future<String> createProject({
     required String name,
     required String type,
@@ -21,7 +21,6 @@ class ProjectService {
         throw Exception('User not authenticated');
       }
 
-      // Prepare project data
       final projectData = {
         'name': name,
         'type': type,
@@ -35,7 +34,6 @@ class ProjectService {
           'stage1Planning': {
             'status': 'pending',
             'startedAt': FieldValue.serverTimestamp(),
-            'documents': [],
           },
           'stage2Design': {
             'status': 'notStarted',
@@ -49,7 +47,6 @@ class ProjectService {
         },
       };
 
-      // Create project in Firestore
       final docRef = await _firestore.collection('projects').add(projectData);
 
       print('Project created successfully with ID: ${docRef.id}');
@@ -68,7 +65,6 @@ class ProjectService {
         throw Exception('User not authenticated');
       }
 
-      // Try to fetch with original query (requires index)
       try {
         final querySnapshot = await _firestore
             .collection('projects')
@@ -80,7 +76,6 @@ class ProjectService {
             .map((doc) => Project.fromFirestore(doc))
             .toList();
       } catch (e) {
-        // If index error occurs, fallback to simplified query without sorting
         print('Error: $e');
 
         return [];
@@ -99,7 +94,6 @@ class ProjectService {
         throw Exception('User not authenticated');
       }
 
-      // Try to fetch with original query (requires index)
       try {
         final querySnapshot = await _firestore
             .collection('projects')
@@ -207,13 +201,10 @@ class ProjectService {
     }
   }
 
-  // Delete a project
   Future<void> deleteProject(String projectId) async {
     try {
-      // Delete project document
       await _firestore.collection('projects').doc(projectId).delete();
       print('Project deleted successfully: $projectId');
-
     } catch (e) {
       print('Error deleting project: $e');
       throw Exception('Failed to delete project: $e');
@@ -223,35 +214,99 @@ class ProjectService {
   // Check and update stages based on document approvals
   Future<void> checkAndAdvanceProjectStages(String projectId) async {
     try {
-      // 1. Get the project document
       final projectDoc =
           await _firestore.collection('projects').doc(projectId).get();
       if (!projectDoc.exists) {
         throw Exception('Project not found');
       }
 
-      // 2. Get all approved documents in stage 1
+      final projectData = projectDoc.data() as Map<String, dynamic>;
+      final stages = projectData['stages'] as Map<String, dynamic>;
+
+      final stageOrder = [
+        'stage1Planning',
+        'stage2Design',
+        'stage3Execution',
+        'stage4Completion'
+      ];
+
+      Map<String, dynamic> updates = {};
+      for (int i = 0; i < stageOrder.length - 1; i++) {
+        final currentStageKey = stageOrder[i];
+        final nextStageKey = stageOrder[i + 1];
+
+        if (stages.containsKey(currentStageKey) &&
+            stages[currentStageKey] is Map &&
+            (stages[currentStageKey] as Map)['status'] == 'completed') {
+          if (stages.containsKey(nextStageKey) &&
+              stages[nextStageKey] is Map &&
+              (stages[nextStageKey] as Map)['status'] == 'notStarted') {
+            updates['stages.$nextStageKey.status'] = 'pending';
+            updates['stages.$nextStageKey.startedAt'] =
+                FieldValue.serverTimestamp();
+            print(
+                'Setting $nextStageKey to pending as $currentStageKey is completed');
+          }
+        }
+      }
+
+      if (updates.isNotEmpty) {
+        await _firestore.collection('projects').doc(projectId).update(updates);
+        print('Project stages updated successfully: $updates');
+        return;
+      }
+
+      String currentStageKey = '';
+      String nextStageKey = '';
+
+      for (int i = 0; i < stageOrder.length; i++) {
+        final stageKey = stageOrder[i];
+        if (stages.containsKey(stageKey) &&
+            stages[stageKey] is Map &&
+            (stages[stageKey] as Map)['status'] == 'pending') {
+          currentStageKey = stageKey;
+          nextStageKey = i < stageOrder.length - 1 ? stageOrder[i + 1] : '';
+          break;
+        }
+      }
+
+      if (currentStageKey.isEmpty) {
+        print('No pending stage found to advance');
+        return;
+      }
+
+      print('Found pending stage: $currentStageKey');
+
       final querySnapshot = await _firestore
           .collection('project_documents')
           .where('projectId', isEqualTo: projectId)
-          .where('stage', isEqualTo: 'stage1Planning')
+          .where('stage', isEqualTo: currentStageKey)
           .where('approvalStatus', isEqualTo: 'approved')
           .get();
 
-      // 3. Check if we have at least 3 approved documents
       if (querySnapshot.docs.length >= 3) {
         print(
-            'Found ${querySnapshot.docs.length} approved documents in stage 1, advancing project stages');
+            'Found ${querySnapshot.docs.length} approved documents in $currentStageKey or stage is already completed, advancing to next stage');
 
         // 4. Update the project stages
-        await _firestore.collection('projects').doc(projectId).update({
-          'stages.stage1Planning.status': 'completed',
-          'stages.stage1Planning.completedAt': FieldValue.serverTimestamp(),
-          'stages.stage2Design.status': 'pending',
-          'stages.stage2Design.startedAt': FieldValue.serverTimestamp(),
-        });
+        final docUpdates = {
+          'stages.$currentStageKey.status': 'completed',
+          'stages.$currentStageKey.completedAt': FieldValue.serverTimestamp(),
+        };
 
-        print('Project stages updated successfully');
+        // Only update the next stage if there is one
+        if (nextStageKey.isNotEmpty) {
+          docUpdates['stages.$nextStageKey.status'] = 'pending';
+          docUpdates['stages.$nextStageKey.startedAt'] =
+              FieldValue.serverTimestamp();
+        }
+
+        await _firestore
+            .collection('projects')
+            .doc(projectId)
+            .update(docUpdates);
+
+        print('Project stages updated successfully based on documents');
       } else {
         print(
             'Not enough approved documents (${querySnapshot.docs.length}/3) to advance project stages');
