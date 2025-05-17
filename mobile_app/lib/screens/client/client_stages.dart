@@ -6,7 +6,6 @@ import '../../models/project.dart';
 import '../../services/project_service.dart';
 import '../../services/document_service.dart';
 
-
 class ClientStagesScreen extends StatefulWidget {
   final String projectId;
   final String projectName;
@@ -110,7 +109,6 @@ class _ClientStagesScreenState extends State<ClientStagesScreen>
   }
 
   Widget _buildProjectStages() {
-
     // Define the project stages
 
     if (_project == null) {
@@ -135,7 +133,6 @@ class _ClientStagesScreenState extends State<ClientStagesScreen>
         ProjectStage.stage4Completion,
         'Completion',
       ),
-
     ];
 
     return Container(
@@ -160,9 +157,10 @@ class _ClientStagesScreenState extends State<ClientStagesScreen>
     // Get status from project data
     final stageStatus = _project!.getStageStatus(stageEnum);
     final stageKey = stageEnum.toString().split('.').last;
-    
+
     // Get payment status from project data
-    final paymentStatus = _project!.stages[stageKey]?['pay_status'] ?? 'not paid';
+    final paymentStatus =
+        _project!.stages[stageKey]?['pay_status'] ?? 'not paid';
 
     // Calculate progress based on approved documents
     final approvedCount = _approvedDocumentCounts[stageEnum] ?? 0;
@@ -171,8 +169,7 @@ class _ClientStagesScreenState extends State<ClientStagesScreen>
     // Calculate progress percentage (defaults to 0 if no documents)
     double progress = 0.0;
     if (totalCount > 0) {
-      progress = approvedCount /
-          (totalCount > 0 ? totalCount : 3); // Default to 3 if no count
+      progress = approvedCount / totalCount;
     }
 
     // For completed stages, always show 100%
@@ -254,9 +251,6 @@ class _ClientStagesScreenState extends State<ClientStagesScreen>
                       ),
                       const SizedBox(height: 4),
                       Text(
-
-                      
-
                         'Status: ${stage['status']}',
                         style: TextStyle(
                           fontSize: 12,
@@ -264,8 +258,9 @@ class _ClientStagesScreenState extends State<ClientStagesScreen>
                         ),
                       ),
                       Text(
-                        'Documents: $approvedCount of $totalCount approved (${(progress * 100).toInt()}%)',
-
+                        totalCount > 0
+                            ? 'Documents: $approvedCount of $totalCount approved (${(progress * 100).toInt()}%)'
+                            : 'Documents: No documents required',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey[600],
@@ -300,8 +295,8 @@ class _ClientStagesScreenState extends State<ClientStagesScreen>
                       ],
                     ),
                     const SizedBox(width: 8),
-                    if (stage['paymentStatus'] != 'paid' && 
-                        stage['name'] != 'Planning & Design' && 
+                    if (stage['paymentStatus'] != 'paid' &&
+                        stage['name'] != 'Planning & Design' &&
                         stage['status'] == 'Completed')
                       ElevatedButton(
                         onPressed: () {
@@ -309,17 +304,19 @@ class _ClientStagesScreenState extends State<ClientStagesScreen>
                             context,
                             MaterialPageRoute(
                               builder: (context) => CheckoutScreen(
-                                projectId:widget.projectId,
-                                projectName:widget.projectName,
+                                projectId: widget.projectId,
+                                projectName: widget.projectName,
                                 stageName: stage['name'],
                               ),
                             ),
                           );
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).colorScheme.primary,
+                          backgroundColor:
+                              Theme.of(context).colorScheme.primary,
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
                           minimumSize: const Size(60, 30),
                           textStyle: const TextStyle(fontSize: 12),
                         ),
