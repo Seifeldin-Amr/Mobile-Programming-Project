@@ -226,7 +226,6 @@ class ProjectCard extends StatelessWidget {
                       ),
                     );
                   },
-                  icon: const Icon(Icons.visibility),
                   label: const Text('View Details'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).colorScheme.primary,
