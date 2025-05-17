@@ -1,6 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-enum DocumentType { meetingSummary, conceptDesign, designBrief, other }
+enum DocumentType {
+  meetingSummary,
+  conceptDesign,
+  designBrief,
+  mepDrawings,
+  constructionDocuments,
+  other
+}
 
 extension DocumentTypeExtension on DocumentType {
   String get displayName {
@@ -11,6 +18,10 @@ extension DocumentTypeExtension on DocumentType {
         return 'Concept Design';
       case DocumentType.designBrief:
         return 'Design Brief';
+      case DocumentType.mepDrawings:
+        return 'MEP Drawings';
+      case DocumentType.constructionDocuments:
+        return 'Construction Documents';
       case DocumentType.other:
         return 'Other';
     }
@@ -68,7 +79,6 @@ class ProjectDocument {
     this.fileContent,
   });
 
-  // Create from Firestore map
   factory ProjectDocument.fromMap(Map<String, dynamic> data) {
     return ProjectDocument(
       id: data['id'] ?? '',
@@ -86,7 +96,6 @@ class ProjectDocument {
     );
   }
 
-  // Convert to Map for Firestore
   Map<String, dynamic> toMap() {
     return {
       'name': name,
@@ -101,7 +110,6 @@ class ProjectDocument {
     };
   }
 
-  // Get stage as ProjectStage enum
   ProjectStage get stageEnum {
     if (stage == null) return ProjectStage.stage1Planning;
 
@@ -128,6 +136,10 @@ class ProjectDocument {
         return DocumentType.conceptDesign;
       case 'designBrief':
         return DocumentType.designBrief;
+      case 'mepDrawings':
+        return DocumentType.mepDrawings;
+      case 'constructionDocuments':
+        return DocumentType.constructionDocuments;
       default:
         return DocumentType.other;
     }

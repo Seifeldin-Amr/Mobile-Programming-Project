@@ -3,6 +3,10 @@ import '../../widgets/custom_app_bar.dart';
 import '../../services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../navigation.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'dart:convert';
+
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -17,7 +21,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _addressController = TextEditingController();
+  final _numbercontroller = TextEditingController();
   bool _isPasswordVisible = false;
+  File? _profileImage;
+  Future<void> _pickImage() async {
+    final pickedFile =
+        await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _profileImage = File(pickedFile.path);
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -26,6 +41,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _addressController.dispose();
+    _numbercontroller.dispose();
     super.dispose();
   }
 
@@ -136,16 +152,76 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   return null;
                 },
               ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _numbercontroller,
+                decoration: const InputDecoration(
+                  labelText: 'Phone Number',
+                  border: OutlineInputBorder(),
+                  prefixIcon:
+                      Icon(Icons.phone), 
+                ),
+                keyboardType: TextInputType.phone,
+                maxLength: 11,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter your phone number';
+                  }
+                  final digitsOnly = RegExp(r'^\d{11}$');
+                  if (!digitsOnly.hasMatch(value)) {
+                    return 'Phone number must be exactly 11 digits';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              GestureDetector(
+                onTap: _pickImage,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.image, color: Colors.grey),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _profileImage != null
+                              ? 'Image selected'
+                              : 'Tap to upload profile image',
+                          style: const TextStyle(
+                              fontSize: 16, color: Colors.black54),
+                        ),
+                      ),
+                      if (_profileImage != null)
+                        const Icon(Icons.check_circle, color: Colors.green),
+                    ],
+                  ),
+                ),
+              ),
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: () async {
                   if (_formKey.currentState!.validate()) {
                     try {
+                      String? encodedImage;
+                      if (_profileImage != null) {
+                        final bytes = await _profileImage!.readAsBytes();
+                        encodedImage = base64Encode(bytes);
+                      }
+
                       Map<String, dynamic> additionalData = {
                         'firstName': _firstNameController.text.trim(),
                         'lastName': _lastNameController.text.trim(),
                         'address': _addressController.text.trim(),
                         'email': _emailController.text.trim(),
+                        'number': _numbercontroller.text.trim(),
+                        'profileImage':
+                            encodedImage,
                         'isAdmin': false,
                       };
 
@@ -161,10 +237,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               content: Text('Registration successful!')),
                         );
 
-                         Navigator.pushReplacement(
+                        Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(
-                              builder: (context) => const NavigationScreen()),
+                            builder: (context) => const NavigationScreen(),
+                          ),
                         );
                       }
                     } catch (e) {
