@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:mobile_app/utils/renovation_calculator.dart';
 import 'home.dart';
 import 'profile.dart';
 import 'services.dart';
 import 'client/client_projects_screen.dart';
 import 'admin/admin_dashboard.dart';
 import '../services/admin_service.dart';
+import 'renovation_estimate.dart';
 
 class NavigationScreen extends StatefulWidget {
   const NavigationScreen({super.key});
@@ -47,15 +49,10 @@ class _NavigationScreenState extends State<NavigationScreen> {
   }
 
   Widget _getScreen(int index) {
-    final List<Widget> commonScreens = [
-      const HomeScreen(),
-      const ServicesPage(),
-    ];
-
     if (_isAdmin) {
       // Admin screens
       final adminScreens = [
-        ...commonScreens,
+        const HomeScreen(),
         const AdminDashboard(),
         const ProfileScreen(),
       ];
@@ -63,7 +60,8 @@ class _NavigationScreenState extends State<NavigationScreen> {
     } else {
       // Client screens
       final clientScreens = [
-        ...commonScreens,
+        const HomeScreen(),
+        const RenovationEstimateScreen(),
         const ClientProjectsScreen(),
         const ProfileScreen(),
       ];
@@ -79,21 +77,32 @@ class _NavigationScreenState extends State<NavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final List<BottomNavigationBarItem> navigationItems = _isAdmin
+        ? <BottomNavigationBarItem>[
+            const BottomNavigationBarItem(
+                icon: Icon(Icons.home), label: 'Home'),
+            const BottomNavigationBarItem(
+                icon: Icon(Icons.admin_panel_settings), label: 'Admin'),
+            const BottomNavigationBarItem(
+                icon: Icon(Icons.person), label: 'Profile')
+          ]
+        : <BottomNavigationBarItem>[
+            const BottomNavigationBarItem(
+                icon: Icon(Icons.home), label: 'Home'),
+            const BottomNavigationBarItem(
+                icon: Icon(Icons.calculate), label: 'Calculator'),
+            const BottomNavigationBarItem(
+                icon: Icon(Icons.folder), label: 'Projects'),
+            const BottomNavigationBarItem(
+                icon: Icon(Icons.person), label: 'Profile')
+          ];
+
     return Scaffold(
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _getScreen(_selectedIndex),
       bottomNavigationBar: BottomNavigationBar(
-        items: <BottomNavigationBarItem>[
-          const BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          const BottomNavigationBarItem(
-              icon: Icon(Icons.work), label: 'Services'),
-          BottomNavigationBarItem(
-              icon: Icon(_isAdmin ? Icons.admin_panel_settings : Icons.folder),
-              label: _isAdmin ? 'Admin' : 'Projects'),
-          const BottomNavigationBarItem(
-              icon: Icon(Icons.person), label: 'Profile')
-        ],
+        items: navigationItems,
         currentIndex: _selectedIndex,
         selectedItemColor: Theme.of(context).colorScheme.primary,
         unselectedItemColor: Colors.grey,
