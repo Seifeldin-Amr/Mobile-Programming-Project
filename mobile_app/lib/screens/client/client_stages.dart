@@ -159,6 +159,10 @@ class _ClientStagesScreenState extends State<ClientStagesScreen>
       ProjectStage stageEnum, String stageName) {
     // Get status from project data
     final stageStatus = _project!.getStageStatus(stageEnum);
+    final stageKey = stageEnum.toString().split('.').last;
+    
+    // Get payment status from project data
+    final paymentStatus = _project!.stages[stageKey]?['pay_status'] ?? 'not paid';
 
     // Calculate progress based on approved documents
     final approvedCount = _approvedDocumentCounts[stageEnum] ?? 0;
@@ -190,6 +194,7 @@ class _ClientStagesScreenState extends State<ClientStagesScreen>
       'stageEnum': stageEnum,
       'approvedCount': approvedCount,
       'totalCount': totalCount,
+      'paymentStatus': paymentStatus,
     };
   }
 
@@ -295,7 +300,9 @@ class _ClientStagesScreenState extends State<ClientStagesScreen>
                       ],
                     ),
                     const SizedBox(width: 8),
-                    if (stage['paymentStatus'] != 'paid' && stage['name'] != 'Planning & Design')
+                    if (stage['paymentStatus'] != 'paid' && 
+                        stage['name'] != 'Planning & Design' && 
+                        stage['status'] == 'Completed')
                       ElevatedButton(
                         onPressed: () {
                           Navigator.push(

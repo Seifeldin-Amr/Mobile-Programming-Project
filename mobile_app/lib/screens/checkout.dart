@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/payment_service.dart';
+import 'purchase_complete.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final String projectId;
@@ -68,29 +69,35 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           });
 
                           try {
-                            print('SENDING TO PAYMENT SERVICE:');
-                            print('Sending project name:"$trimmedProjectName"');
-                            print('Sending stage name:"${widget.stageName}"');
-                            
                             await _paymentService.updatePaymentStatus(
                               projectName: trimmedProjectName,
                               stageName: widget.stageName,
                             );
 
                             if (mounted) {
+                              print('==========================================');
                               print('PAYMENT SUCCESSFUL');
+                              print('==========================================');
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text('Payment successful!'),
                                   backgroundColor: Colors.green,
                                 ),
                               );
-                              Navigator.pop(context);
+                              // Navigate to PurchaseCompleteScreen
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const PurchaseCompleteScreen(),
+                                ),
+                              );
                             }
                           } catch (e) {
                             if (mounted) {
+                              print('==========================================');
                               print('PAYMENT FAILED');
                               print('Error: $e');
+                              print('==========================================');
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text('Payment failed: $e'),
@@ -112,13 +119,23 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
                   child: _isProcessing
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
+                      ? Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            const Text(
+                              'Pay',
+                              style: TextStyle(fontSize: 18),
+                            ),
+                          ],
                         )
                       : const Text(
                           'Pay Now',
